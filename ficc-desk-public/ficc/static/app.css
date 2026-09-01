@@ -1,0 +1,694 @@
+/* ficc-desk 디자인 시스템 — Phase 2
+ *
+ * "다크 테마"가 아니라 정보 밀도를 위한 규범이다 (CLAUDE.md UI 규칙).
+ * 모서리 반경 0 · 그림자 없음 · 그라디언트 없음 · 장식 없음.
+ * 색값은 전부 이 파일 맨 위의 토큰에서만 나온다. 규칙 안에 하드코딩하지 않는다.
+ */
+
+:root {
+  --bg:            #0E1013;
+  --bg-panel:      #131619;
+  --bg-raised:     #171A1E;
+  --bg-sunken:     #0B0D0F;
+
+  --hairline:        #23272C;
+  --hairline-strong: #333940;
+
+  --fg:       #D7DBE0;
+  --fg-dim:   #8A9199;
+  --fg-label: #6E757D;
+
+  /* 강조색은 앰버 1종뿐이다. 화면에서 면적으로 쓰는 곳은 무효화 워치 패널 하나다. */
+  --accent:      #FF9A1F;
+  --accent-weak: rgba(255, 154, 31, .14);
+  --accent-line: rgba(255, 154, 31, .38);
+
+  /* '깨짐'은 색만이 아니라 형태로도 구분한다 — 배경 반전 + 좌측 3px 바.
+   * 방향 색(빨강/파랑)은 작은 등폭 숫자에만 붙으므로 문맥이 겹치지 않는다. */
+  --broken-bg:  #2E0C0A;
+  --broken-bar: #FF453A;
+  --broken-fg:  #FF9E99;
+
+  --font: "Cascadia Mono", "Cascadia Code", Consolas,
+          "Malgun Gothic", "맑은 고딕", monospace;
+
+  --row-h: 32px;
+
+  /* input[type=date] 의 달력, select 의 드롭다운은 UA 위젯이라 이 파일이 못 칠한다.
+   * 이 한 줄이 없으면 그것들만 흰 바탕으로 튀어나와 화면 규범이 깨진다. */
+  color-scheme: dark;
+}
+
+/* 방향 색. app_setting.color_convention 이 <html data-color-convention> 으로 들어온다.
+ * 금리 상승은 좋은 것도 나쁜 것도 아니다. 색은 방향만 나타내고 가치판단을 암시하지 않는다. */
+[data-color-convention="kr"] {          /* 국내 관습: 상승 빨강 / 하락 파랑 */
+  --dir-up:   #FF5F52;
+  --dir-down: #4E9BFF;
+}
+[data-color-convention="bbg"] {         /* 블룸버그 관습: 상승 초록 / 하락 빨강 */
+  --dir-up:   #35C46B;
+  --dir-down: #FF5F52;
+}
+
+/* ------------------------------------------------------------------ 리셋 */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  border-radius: 0;      /* 둥근 모서리 금지 */
+  box-shadow: none;      /* 그림자 금지 */
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;      /* 페이지 스크롤 금지. 패널 내부만 스크롤한다. */
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.35;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 숫자가 흔들리면 스캔이 불가능하다. */
+body { font-variant-numeric: tabular-nums; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-sunken); }
+::-webkit-scrollbar-thumb { background: var(--hairline-strong); }
+* { scrollbar-width: thin; scrollbar-color: var(--hairline-strong) var(--bg-sunken); }
+
+/* ------------------------------------------------------------ 그리드 셸 */
+
+.desk {
+  display: grid;
+  height: 100vh;
+  grid-template-columns: 340px minmax(0, 1fr) 400px;
+  /* 940px 예산 (SPEC 3.1): 36 + 330 + 300 + 274.
+   * 2·3행을 각각 30px 씩 내렸다. 스냅샷이 두 행을 세로로 걸치므로 본문이 548 → 608px
+   * 이 되어 셀 한 줄을 더 보여주고(41 필드로 늘어난 뒤 내부 스크롤이 생겼다),
+   * 블로터·워치는 그만큼 아래에서 시작한다.
+   * 아래로 더 내리지 않는 이유: 워치 블록이 포지션 1건당 130px 인데 마지막 행
+   * 414px 의 본문은 358px 이라 2 건이 여유(259px), 3 건부터 패널 안에서 스크롤한다.
+   * 여기서 30px 을 더 가져오면 2 건짜리 화면이 바로 스크롤한다.
+   * 마지막 행만 1fr 이라 화면이 더 크면 블로터·워치가 늘어난다. */
+  grid-template-rows: 36px 330px 300px minmax(0, 1fr);
+  grid-template-areas:
+    "topbar  topbar   topbar"
+    "night   snapshot routine"
+    "journal snapshot events"
+    "blotter blotter  watch";
+  background: var(--bg);
+}
+
+.a-topbar   { grid-area: topbar; }
+.a-night    { grid-area: night; }
+.a-journal  { grid-area: journal; }
+.a-snapshot { grid-area: snapshot; }
+.a-routine  { grid-area: routine; }
+.a-events   { grid-area: events; }
+.a-blotter  { grid-area: blotter; }
+.a-watch    { grid-area: watch; }
+
+/* --------------------------------------------------------------- 패널 */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+}
+.a-routine, .a-events, .a-watch { border-right: 0; }
+.a-blotter, .a-watch { border-bottom: 0; }
+
+.panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 22px;
+  flex: 0 0 22px;
+  padding: 0 8px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--hairline);
+}
+.panel__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 8px;
+}
+.panel__body--flush { padding: 0; }
+
+/* 라벨은 소형 캡션 + 넓은 자간. 한글에는 uppercase 가 의미 없으므로 자간만 준다. */
+.cap {
+  font-size: 11px;
+  letter-spacing: .09em;
+  color: var(--fg-label);
+  white-space: nowrap;
+}
+.cap--en { text-transform: uppercase; }
+.cap--tiny { font-size: 10px; letter-spacing: .08em; }
+
+.hint { color: var(--fg-dim); }
+.num  { font-variant-numeric: tabular-nums; }
+
+/* 빈 상태: 사과하지 않고 다음 행동을 지시한다. */
+.empty {
+  color: var(--fg-dim);
+  font-size: 12px;
+  padding: 10px 2px;
+  letter-spacing: .02em;
+}
+.empty__cmd { color: var(--accent); }
+
+/* ------------------------------------------------------------- 상단 바 */
+
+.topbar {
+  grid-area: topbar;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--hairline-strong);
+}
+.topbar__date { font-size: 15px; font-weight: 700; letter-spacing: .04em; }
+.topbar__item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0 12px;
+  border-left: 1px solid var(--hairline);
+  margin-left: 12px;
+}
+.topbar__item:first-of-type { border-left: 0; }
+.topbar__k { font-size: 10px; letter-spacing: .09em; color: var(--fg-label); text-transform: uppercase; }
+.topbar__v { font-size: 14px; font-weight: 700; }
+.topbar__v--attn { color: var(--accent); }   /* 미점검 — 워치 패널로 시선을 보낸다 */
+.topbar__spacer { flex: 1 1 auto; }
+
+.convention {
+  font-size: 11px;
+  letter-spacing: .08em;
+  color: var(--fg-dim);
+  background: transparent;
+  border: 1px solid var(--hairline-strong);
+  padding: 2px 8px;
+  font-family: var(--font);
+  cursor: pointer;
+}
+.convention:hover { color: var(--fg); border-color: var(--accent-line); }
+.convention__up   { color: var(--dir-up); }
+.convention__down { color: var(--dir-down); }
+
+/* ---------------------------------------------------------- 마켓 스냅샷 */
+
+.group + .group { margin-top: 7px; }
+/* 스냅샷이 41 필드로 늘어난 뒤로 패널 안이 두 화면쯤 된다 (페이지는 여전히
+ * 스크롤하지 않는다 — 패널 내부만이다). 카테고리 머리가 같이 밀려 올라가면
+ * 스크롤 중간에서 지금 보는 숫자가 국고 커브인지 UST 커브인지 알 수 없다.
+ * 그래서 머리만 패널 위쪽에 붙인다. 애니메이션이 아니라 위치 규칙이다. */
+.group__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 3px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-panel);
+  padding-bottom: 1px;
+}
+.group__head::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--hairline);
+}
+.grid-cells {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--hairline);
+  border-left: 1px solid var(--hairline);
+}
+.cell {
+  min-height: 56px;
+  padding: 4px 8px 5px;
+  border-right: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+}
+.cell__label {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 10px;
+  letter-spacing: .08em;
+  color: var(--fg-label);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cell__mark { color: var(--fg-dim); }        /* ᴹ 수동 입력 · ⓘ 자동 수집 불가 */
+/* ᴹ 자리는 항상 있지만(저장 후 붙여야 하므로) 비어 있을 때 gap 을 먹으면 안 된다. */
+.cell__mark:empty, .cell__asof:empty { display: none; }
+.cell__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cell__value { font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+.cell__delta { font-size: 12px; flex: 0 0 auto; }
+.cell__asof  { font-size: 9px; letter-spacing: .06em; color: var(--fg-label); }
+.cell--derived { background: var(--bg-sunken); }
+.cell--miss span.cell__value { font-size: 12px; font-weight: 400; color: var(--fg-dim); }
+
+/* 인라인 입력창. 포커스 전에는 값 텍스트와 픽셀이 같아야 한다 — 화면이 입력 폼처럼
+ * 보이기 시작하면 터미널의 시각 언어가 무너진다. 포커스에서만 바탕이 파인다. */
+.cell__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font-family: var(--font);
+  font-variant-numeric: tabular-nums;
+}
+.cell__input:focus {
+  outline: 1px solid var(--accent-line);
+  outline-offset: 1px;
+  background: var(--bg-sunken);
+}
+.cell__input::placeholder {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--fg-dim);
+}
+/* 저장 실패·비숫자. 값은 그대로 두고 테두리로만 알린다. 토스트를 만들지 않는다. */
+.is-invalid { outline: 1px solid var(--broken-bar); outline-offset: 1px; }
+.is-hidden { display: none; }
+
+.dir-up   { color: var(--dir-up); }
+.dir-down { color: var(--dir-down); }
+.dir-flat { color: var(--fg-dim); }
+.dir-na   { color: var(--fg-label); }
+
+/* ------------------------------------------------------- 서술형 입력 */
+
+.field + .field { margin-top: 7px; }
+.field__label { display: block; margin-bottom: 3px; }
+.field__input,
+.field__area {
+  display: block;
+  width: 100%;
+  background: var(--bg-sunken);
+  border: 1px solid var(--hairline);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 5px 7px;
+  resize: none;
+}
+.field__input:focus,
+.field__area:focus { outline: none; border-color: var(--accent-line); }
+.field__input::placeholder,
+.field__area::placeholder { color: var(--fg-label); }
+.field__area { overflow-y: auto; }
+
+.stack { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.stack > .field--grow { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.stack > .field--grow .field__area { flex: 1 1 auto; min-height: 0; }
+
+/* -------------------------------------------------------------- 루틴
+ * 체크 항목은 <button role="checkbox"> 다. <button> 은 Space 와 Enter 를 둘 다
+ * 기본 활성화하고, 행 전체가 타깃이 된다. 버튼처럼 보이지는 않게 리셋한다. */
+
+.routine, .weekly {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.routine:focus-visible, .weekly:focus-visible {
+  outline: 1px solid var(--accent-line);
+  outline-offset: -1px;
+}
+
+.routine {
+  gap: 8px;
+  height: 26px;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 12px;
+}
+.routine__box {
+  width: 12px;
+  text-align: center;
+  color: var(--fg-label);
+}
+.routine--done .routine__box { color: var(--fg-dim); }
+.routine--done .routine__label { color: var(--fg-dim); }
+.routine__label { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.subhead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 9px 0 3px;
+}
+.subhead::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--hairline); }
+
+.weekly { gap: 8px; font-size: 12px; height: 22px; }
+.weekly__day { color: var(--accent); width: 22px; flex: 0 0 22px; }
+.weekly__label { flex: 1 1 auto; color: var(--fg-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.weekly__box { flex: 0 0 12px; text-align: center; color: var(--fg-label); }
+.weekly--done .weekly__label { color: var(--fg-label); text-decoration: line-through; }
+.weekly--done .weekly__box { color: var(--fg-dim); }
+
+/* ------------------------------------------------------------ 이벤트 */
+
+.event {
+  display: grid;
+  grid-template-columns: 44px 26px minmax(0, 1fr);
+  gap: 0 7px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 12px;
+}
+.event__date   { color: var(--fg-dim); }
+.event__region { color: var(--fg-label); font-size: 10px; letter-spacing: .08em; }
+.event__name   { color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.event__lines  { grid-column: 3; font-size: 11px; }
+.event__line   { display: flex; gap: 6px; color: var(--fg-dim); }
+.event__k      { color: var(--fg-label); flex: 0 0 auto; }
+.event__call--hit     { color: var(--fg); }
+.event__call--miss    { color: var(--broken-fg); }
+.event__call--partial { color: var(--accent); }
+.event--past .event__name { color: var(--fg-dim); }
+
+/* 인라인 예상·실제. 스냅샷 셀과 같은 규약이다 — 평소엔 텍스트, 포커스에서만 파인다. */
+.event__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--fg);
+  font: inherit;
+}
+.event__input:focus {
+  outline: 1px solid var(--accent-line);
+  outline-offset: 1px;
+  background: var(--bg-sunken);
+}
+.event__input::placeholder { color: var(--fg-label); }
+.event__call {
+  flex: 0 0 auto;
+  background: transparent;
+  border: 0;
+  color: var(--fg-dim);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.event__call:focus { outline: 1px solid var(--accent-line); }
+
+/* 등록 수단이 없으면 event 테이블은 영원히 비고 월요일 루틴이 거짓말이 된다. */
+.event-add {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border-top: 1px solid var(--hairline);
+  background: var(--bg-raised);
+}
+.event-add input, .event-add select {
+  background: var(--bg-sunken);
+  border: 1px solid var(--hairline);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 11px;
+  padding: 2px 4px;
+  min-width: 0;
+}
+.event-add__name { flex: 1 1 auto; }
+.event-add input:focus, .event-add select:focus {
+  outline: none;
+  border-color: var(--accent-line);
+}
+.event-add input::placeholder { color: var(--fg-label); }
+
+/* ------------------------------------------------------------ 블로터 */
+
+.blotter { width: 100%; border-collapse: collapse; font-size: 12px; }
+.blotter thead th {
+  position: sticky;
+  top: 0;
+  height: 24px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--hairline-strong);
+  padding: 0 8px;
+  text-align: right;
+  font-weight: 400;
+  font-size: 10px;
+  letter-spacing: .09em;
+  color: var(--fg-label);
+  white-space: nowrap;
+}
+.blotter tbody td {
+  height: var(--row-h);
+  padding: 0 8px;
+  border-bottom: 1px solid var(--hairline);
+  text-align: right;
+  white-space: nowrap;
+}
+.blotter .t-l { text-align: left; }
+.blotter .t-c { text-align: center; }
+.blotter tbody td.strong { font-weight: 700; font-size: 13px; }
+.blotter__code { color: var(--fg-dim); }
+.blotter__name { max-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.blotter__tag {
+  font-size: 10px;
+  letter-spacing: .08em;
+  color: var(--fg-label);
+  border: 1px solid var(--hairline-strong);
+  padding: 1px 4px;
+}
+.blotter tr.is-broken td { background: var(--broken-bg); color: var(--broken-fg); }
+.blotter tr.is-broken td:first-child { box-shadow: inset 3px 0 0 var(--broken-bar); }
+.blotter tr.is-shaky .state-dot { color: var(--accent); }
+.state-dot { color: var(--fg-dim); }
+
+/* ------------------------------------- 시그니처: 무효화 조건 워치 ------
+ * 이 화면에서 가장 눈에 띄어야 할 단 하나의 패널이다.
+ * 감시 대상은 손익이 아니라 "내 논리가 아직 유효한가" 다.
+ * 강조색을 면적과 굵기로 쓰는 곳은 여기뿐이다. */
+
+.a-watch { border-left: 3px solid var(--accent); }
+.a-watch .panel__head {
+  height: 28px;
+  flex-basis: 28px;
+  background: var(--accent-weak);
+  border-bottom: 1px solid var(--accent-line);
+}
+.watch__title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  color: var(--accent);
+}
+
+.wpos { border-bottom: 1px solid var(--hairline); padding: 6px 0 7px; }
+.wpos:first-child { padding-top: 2px; }
+.wpos__head { display: flex; align-items: baseline; gap: 7px; }
+.wpos__code { color: var(--fg-dim); font-size: 11px; }
+.wpos__name {
+  flex: 1 1 auto;
+  font-size: 13px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wpos__meta {
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--fg-dim);
+  margin: 1px 0 4px;
+  padding-left: 1px;
+}
+
+.cond { padding: 3px 0 3px 8px; border-left: 1px solid var(--hairline); margin-top: 3px; }
+.cond__text { font-size: 12px; line-height: 1.3; color: var(--fg); }
+.cond__toggle { display: flex; gap: 12px; margin-top: 2px; }
+
+/* 네이티브 radio 를 안 보이게 두고 글리프는 label 이 그린다. 숨기되 포커스는 받아야
+ * 하므로 display:none 이 아니라 1px 투명이다 — 그래야 브라우저의 radiogroup 키보드
+ * 규약(Tab 1 스톱 + 화살표 이동)이 그대로 살아 있다. */
+.cond__radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  margin: 0;
+  pointer-events: none;
+}
+.cond__opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  letter-spacing: .04em;
+  color: var(--fg-label);
+  cursor: pointer;
+}
+.cond__opt::before { content: "○"; }
+.cond__radio:checked + .cond__opt::before { content: "◉"; }
+.cond__radio:checked + .cond__opt { color: var(--fg-dim); }               /* 유효 = 중립 */
+.cond__radio:checked + .cond__opt--shaky  { color: var(--accent); }       /* 흔들림 = 앰버 */
+.cond__radio:checked + .cond__opt--broken { color: var(--broken-bar); }   /* 깨짐 = 경고 */
+.cond__radio:focus-visible + .cond__opt {
+  outline: 1px solid var(--accent-line);
+  outline-offset: 2px;
+}
+
+.cond--broken {
+  background: var(--broken-bg);
+  border-left: 3px solid var(--broken-bar);
+  padding-left: 6px;
+}
+.cond--broken .cond__text { color: var(--broken-fg); }
+.cond--unchecked { border-left-color: var(--accent-line); }
+.cond--unchecked .cond__text { color: var(--fg-dim); }
+
+.watch__foot {
+  padding: 6px 8px;
+  border-top: 1px solid var(--hairline);
+  font-size: 11px;
+  letter-spacing: .06em;
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+
+/* ------------------------------------------------------- 아이디어 모달
+ * 네이티브 <dialog>. 포커스 트랩·Esc·배경 inert 는 브라우저가 준다.
+ * html{overflow:hidden} 이므로 내부 스크롤을 반드시 직접 준다. */
+
+.ghost-btn {
+  background: transparent;
+  border: 1px solid var(--hairline-strong);
+  color: var(--fg-dim);
+  font-family: var(--font);
+  font-size: 11px;
+  letter-spacing: .06em;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.ghost-btn:hover { color: var(--fg); border-color: var(--accent-line); }
+.ghost-btn:focus-visible { outline: 1px solid var(--accent-line); outline-offset: 1px; }
+.ghost-btn--go { color: var(--accent); border-color: var(--accent-line); }
+
+.modal {
+  width: 680px;
+  max-width: 94vw;
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--hairline-strong);
+  border-left: 3px solid var(--accent);
+  color: var(--fg);
+  font-family: var(--font);
+}
+.modal::backdrop { background: rgba(0, 0, 0, .62); }
+.modal__body { padding: 0 12px 12px; }
+.modal__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 0 -12px 10px;
+  padding: 6px 12px;
+  background: var(--accent-weak);
+  border-bottom: 1px solid var(--accent-line);
+}
+.modal__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px 10px;
+}
+.mfield { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.mfield--wide { grid-column: 1 / -1; }
+.modal__section { margin-top: 12px; }
+.mcond { margin-bottom: 5px; }
+.modal__foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 9px;
+  border-top: 1px solid var(--hairline);
+}
+.modal__error {
+  flex: 1 1 auto;
+  font-size: 11px;
+  color: var(--broken-fg);
+  min-height: 1em;
+}
+
+/* 블로터의 수동 마킹 칸. 표 안이라 우측 정렬을 유지한다. */
+.blotter__mark { width: 62px; text-align: right; font-size: 12px; font-weight: 400; }
+
+/* -------------------------------------------------------------- 플래시
+ * 값이 갱신되면 해당 셀이 한 번 짧게 플래시한다. 그 외 애니메이션은 없다. */
+
+@keyframes cell-flash {
+  from { background-color: var(--accent-weak); }
+  to   { background-color: transparent; }
+}
+.flash { animation: cell-flash 150ms steps(1, end); }
+
+@media (prefers-reduced-motion: reduce) {
+  .flash { animation: none; }
+}
+
+/* --------------------------------------------------------- 1440px 대응
+ * 브레이크포인트는 이 하나뿐이다. 데스크톱 전용이고, 1440px 에서 깨지지만 않으면 된다. */
+
+@media (max-width: 1560px) {
+  /* 900px 예산: 36 + 288 + 250 + 324. 위에서 블로터·워치를 60px 내렸지만 **여기서는
+   * 내리지 않는다.** 세로 900px 화면에서는 마지막 행이 324px 뿐이고 워치 본문이
+   * 268px 인데 포지션 2 건이 269px 이다 (실측) — 10px 만 가져가도 바로 스크롤한다.
+   * 스냅샷은 셀 높이(44px)와 3열 접기로 감당한다. */
+  .desk {
+    grid-template-columns: 296px minmax(0, 1fr) 360px;
+    grid-template-rows: 36px 288px 252px minmax(0, 1fr);
+  }
+  .grid-cells { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cell { min-height: 44px; padding: 3px 7px 4px; }
+  .cell__value { font-size: 15px; }
+  .group + .group { margin-top: 4px; }
+  .group__head { margin-bottom: 2px; }
+  .event { padding: 3px 0; }
+  .blotter { font-size: 11px; }
+  .blotter tbody td { padding: 0 6px; }
+  .wpos__name { font-size: 12px; }
+}

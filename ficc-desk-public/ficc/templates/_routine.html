@@ -1,0 +1,49 @@
+{# 요일별 체크리스트. 두 묶음이다.
+     오늘   — 매일 항목 + 오늘 요일 항목. 상단 바의 '오늘 미완료' 가 세는 것도 이것뿐이다.
+     이번 주 — 이번 주의 다른 요일 항목 (월/수/금)
+
+   격주·월간·분기 항목은 화면에 없다 (마이그레이션 004). 사용자가 이 도구 밖에서
+   직접 계획한다. 하루 안에 끝낼 일과 한 달 안에 끝낼 일이 같은 목록에 있으면
+   '오늘 미완료' 가 매일 거짓말을 하고, 몇 주씩 체크되지 않는 줄이 화면을 읽지 않게 만든다.
+
+   연속 기록은 counts_streak=1 인 일간 항목만 센다. #}
+{% set today = vm.header.weekday | lower %}
+{% set day_ko = {'mon': '월', 'wed': '수', 'fri': '금'} %}
+{% set todays = vm.routines | selectattr('cadence', 'in', ['daily', today]) | list %}
+{% set weekly = vm.routines | selectattr('cadence', 'in', ['mon', 'wed', 'fri']) | rejectattr('cadence', 'equalto', today) | list %}
+
+<section class="panel a-routine">
+  <div class="panel__head">
+    <span class="cap">오늘의 루틴 ({{ vm.header.weekday }})</span>
+    {# 세는 규칙은 빌더에 하나만 둔다. 여기서 또 세면 상단 바와 언젠가 어긋난다. #}
+    <span class="cap cap--tiny num">
+      <span data-role="done-today">{{ vm.header.total_today - vm.header.undone_today }}</span>/<span data-role="total-today">{{ vm.header.total_today }}</span>
+    </span>
+  </div>
+  <div class="panel__body">
+    {% for item in todays %}
+    {# <button> 은 Space 와 Enter 를 둘 다 기본 활성화한다. input[type=checkbox] 는 Space 만 먹는다. #}
+    <button type="button" class="routine {% if item.done %}routine--done{% endif %}"
+            role="checkbox" aria-checked="{{ 'true' if item.done else 'false' }}"
+            data-routine="{{ item.key }}">
+      <span class="routine__box" aria-hidden="true">{{ '☑' if item.done else '☐' }}</span>
+      <span class="routine__label">{{ item.label }}</span>
+    </button>
+    {% else %}
+      <p class="empty">오늘 루틴 정의 없음 — <span class="empty__cmd">routine_def 확인</span></p>
+    {% endfor %}
+
+    {% if weekly %}
+    <div class="subhead"><span class="cap">이번 주</span></div>
+    {% for item in weekly %}
+    <button type="button" class="weekly {% if item.done %}weekly--done{% endif %}"
+            role="checkbox" aria-checked="{{ 'true' if item.done else 'false' }}"
+            data-routine="{{ item.key }}">
+      <span class="weekly__day">{{ day_ko.get(item.cadence, item.cadence) }}</span>
+      <span class="weekly__label">{{ item.label }}</span>
+      <span class="weekly__box" aria-hidden="true">{{ '☑' if item.done else '☐' }}</span>
+    </button>
+    {% endfor %}
+    {% endif %}
+  </div>
+</section>

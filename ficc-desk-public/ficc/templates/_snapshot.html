@@ -1,0 +1,67 @@
+{# 마켓 스냅샷. 셀 수는 field_def 가 정한다 — 머리말 숫자를 손으로 적지 않는다.
+   ᴹ = 수동 입력값, ⓘ = 자동 수집 소스가 없는 필드 (SPEC 3.6).
+   값이 없으면 '미수집' — 0 으로 채우지 않는다 (CLAUDE.md 1).
+
+   저장 필드는 미수집이든 아니든 **항상 입력창**이다. 미수집 셀에 인라인 입력이 있어야 하고
+   (SPEC 3.6) 자동 수집값도 여기서 덮어쓸 수 있어야 하는데(routes/observations.py),
+   한 가지 모양으로 두 요구를 다 만족시키면 span↔input 교체 같은 상태 기계가 사라진다.
+   파생값은 저장 대상이 아니므로 입력창을 만들지 않는다 (CLAUDE.md 2).
+
+   delta 와 as_of 는 값이 없어도 노드를 남긴다 — 저장 직후 클라이언트가 채울 자리가
+   없으면 새로고침 전까지 '—' 조차 뜨지 않는다. 빈 노드는 CSS 의 :empty 가 숨긴다. #}
+<section class="panel a-snapshot">
+  <div class="panel__head">
+    <span class="cap">마켓 스냅샷</span>
+    {% set all_cells = vm.groups | map(attribute='cells') | map('list') | sum(start=[]) %}
+    <span class="cap cap--tiny cap--en">
+      {{ all_cells | rejectattr('is_derived') | list | length }} stored ·
+      {{ all_cells | selectattr('is_derived') | list | length }} derived
+    </span>
+  </div>
+  <div class="panel__body">
+    {% if not vm.groups %}
+      <p class="empty">오늘 스냅샷 미수집 — <span class="empty__cmd">python -m ficc.ingest</span></p>
+    {% endif %}
+
+    {% for group in vm.groups %}
+    <div class="group">
+      <div class="group__head"><span class="cap">{{ group.title }}</span></div>
+      <div class="grid-cells">
+        {% for cell in group.cells %}
+        <div class="cell {% if cell.is_derived %}cell--derived{% endif %}
+                    {% if cell.status == 'miss' %}cell--miss{% endif %}"
+             data-field="{{ cell.field_key }}">
+          <div class="cell__label">
+            <span>{{ cell.label_short }}</span>
+            <span class="cell__mark" data-role="mark" title="수동 입력">{% if cell.source == 'manual' %}ᴹ{% endif %}</span>
+            {% if not cell.is_derived and not cell.auto_provider %}
+              <span class="cell__mark" title="자동 수집 소스 없음 — 수동 전용">ⓘ</span>
+            {% endif %}
+          </div>
+          <div class="cell__row">
+            {% if cell.is_derived %}
+              <span class="cell__value" data-role="value">{{ cell | fmt_value }}</span>
+            {% else %}
+              <input class="cell__value cell__input" data-role="value"
+                     type="text" inputmode="decimal" autocomplete="off" spellcheck="false"
+                     aria-label="{{ cell.label_short }}" placeholder="미수집"
+                     value="{{ cell | fmt_input }}">
+            {% endif %}
+            <span class="cell__delta dir-{{ cell.delta | dir_class }}" data-role="delta">
+              {{- cell | fmt_delta -}}
+            </span>
+          </div>
+          <span class="cell__asof" data-role="note">
+            {%- if cell.status == 'miss' and cell.missing_inputs -%}
+              {{ cell.missing_inputs | join(', ') }} 없음
+            {%- elif cell.stale and cell.as_of -%}
+              as of {{ cell.as_of }}
+            {%- endif -%}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>

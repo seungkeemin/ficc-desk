@@ -1,0 +1,52 @@
+{# 상단 바. 연속 기록은 숫자만 표시한다 — 배지도 경고도 없고, 게임화하지 않는다.
+   data-role 은 인라인 저장 후 갱신 대상이다. 본문만 바뀌고 상단 바가 그대로면
+   두 숫자가 어긋난 화면이 된다. #}
+<header class="topbar a-topbar">
+  <span class="topbar__date">{{ vm.header.obs_date }} {{ vm.header.weekday }}</span>
+
+  <span class="topbar__item">
+    <span class="topbar__k">연속</span>
+    <span class="topbar__v num">D+<span data-role="streak">{{ vm.header.streak_days }}</span></span>
+  </span>
+
+  <span class="topbar__item">
+    <span class="topbar__k">오늘 미완료</span>
+    <span class="topbar__v num"><span data-role="undone">{{ vm.header.undone_today }}</span>/<span data-role="total">{{ vm.header.total_today }}</span></span>
+  </span>
+
+  <span class="topbar__item">
+    <span class="topbar__k">data</span>
+    {% if vm.header.data_as_of %}
+      <span class="topbar__v num">{{ vm.header.data_as_of }} KST</span>
+    {% else %}
+      {# 미수집을 0 이나 '00:00' 으로 채우지 않는다 (CLAUDE.md 1). #}
+      <span class="topbar__v hint">미수집</span>
+    {% endif %}
+  </span>
+
+  <span class="topbar__item">
+    <span class="topbar__k">manual</span>
+    <span class="topbar__v num" data-role="manual-count">{{ vm.header.manual_count }}</span>
+  </span>
+
+  <span class="topbar__item">
+    <span class="topbar__k">miss</span>
+    <span class="topbar__v num" data-role="miss-count">{{ vm.header.miss_count }}</span>
+  </span>
+
+  {# 유일하게 앰버로 칠하는 상단 항목. 시선을 무효화 워치 패널로 보낸다.
+     0 이면 숨기지만 노드는 남긴다 — 점검을 되돌렸을 때 다시 나타나야 한다. #}
+  <span class="topbar__item {% if not vm.header.unchecked_count %}is-hidden{% endif %}"
+        data-role="unchecked-item">
+    <span class="topbar__k">미점검</span>
+    <span class="topbar__v topbar__v--attn num" data-role="unchecked">{{ vm.header.unchecked_count }}</span>
+  </span>
+
+  <span class="topbar__spacer"></span>
+
+  <button class="convention" type="button" id="convention-toggle"
+          title="방향 색 관례 전환">
+    <span id="convention-label">{{ '국내색상' if vm.header.color_convention == 'kr' else '블룸버그색상' }}</span>
+    <span class="convention__up">▲</span><span class="convention__down">▼</span>
+  </button>
+</header>

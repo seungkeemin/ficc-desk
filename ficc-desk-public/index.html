@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<!--
+  ficc-desk 랜딩 페이지 (GitHub Pages).
+
+  Settings > Pages > Source: Deploy from a branch > main + / (root)
+
+  ⚠ 아래 저장소 주소 4곳을 실제 주소로 바꾼다. "USERNAME/REPO" 로 검색하면 전부 나온다.
+
+  이 파일은 앱과 같은 디자인 토큰을 쓰지만 ficc/static/app.css 를 참조하지 않는다 —
+  Pages 는 정적 파일만 서빙하고 /static/ 경로가 없기 때문이다. 토큰을 바꿀 일이 생기면
+  app.css 와 이 파일 두 곳을 같이 고친다.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ficc-desk — a FICC desk routine, in one screen</title>
+<meta name="description" content="A one-person local dashboard for running a FICC trading desk routine. Rates, FX and credit on one screen, next to the log that says whether the discipline held.">
+<style>
+:root {
+  --bg:            #0E1013;
+  --bg-panel:      #131619;
+  --bg-raised:     #171A1E;
+  --bg-sunken:     #0B0D0F;
+
+  --hairline:        #23272C;
+  --hairline-strong: #333940;
+
+  --fg:       #D7DBE0;
+  --fg-dim:   #8A9199;
+  --fg-label: #6E757D;
+
+  --accent:      #FF9A1F;
+  --accent-weak: rgba(255, 154, 31, .14);
+  --accent-line: rgba(255, 154, 31, .38);
+
+  --broken-bg:  #2E0C0A;
+  --broken-bar: #FF453A;
+  --broken-fg:  #FF9E99;
+
+  --dir-up:   #FF5F52;
+  --dir-down: #4E9BFF;
+
+  --font: "Cascadia Mono", "Cascadia Code", Consolas,
+          "Malgun Gothic", "맑은 고딕", ui-monospace, monospace;
+
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; border-radius: 0; box-shadow: none; }
+
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.65;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--accent-weak); }
+
+a { color: var(--fg); text-decoration: none; border-bottom: 1px solid var(--hairline-strong); }
+a:hover { color: var(--accent); border-bottom-color: var(--accent-line); }
+
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+.prose { max-width: 74ch; }
+p { margin: 0 0 14px; }
+p:last-child { margin-bottom: 0; }
+
+.cap {
+  font-size: 11px;
+  letter-spacing: .09em;
+  color: var(--fg-label);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------- masthead */
+
+.masthead { border-bottom: 1px solid var(--hairline-strong); background: var(--bg-raised); }
+.masthead__inner { padding-top: 44px; padding-bottom: 30px; }
+h1 {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: .01em;
+  margin: 0 0 4px;
+}
+h1 .dot { color: var(--accent); }
+.lede { font-size: 16px; color: var(--fg); margin: 0 0 6px; max-width: 70ch; }
+.sub  { font-size: 14px; color: var(--fg-dim); margin: 0 0 22px; max-width: 70ch; }
+
+.meta { display: flex; flex-wrap: wrap; margin: 0 0 20px; }
+.meta__item {
+  padding: 0 14px;
+  border-left: 1px solid var(--hairline);
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+.meta__item:first-child { padding-left: 0; border-left: 0; }
+.meta__item b { color: var(--fg); font-weight: 700; }
+
+.links { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn {
+  display: inline-block;
+  padding: 4px 12px;
+  font-size: 12px;
+  letter-spacing: .06em;
+  color: var(--fg-dim);
+  border: 1px solid var(--hairline-strong);
+}
+.btn:hover { color: var(--fg); border-color: var(--accent-line); }
+.btn--go { color: var(--accent); border-color: var(--accent-line); }
+
+/* -------------------------------------------------------------- section */
+
+section { padding: 40px 0; border-bottom: 1px solid var(--hairline); }
+main > section:last-of-type { border-bottom: 0; }
+
+.head { display: flex; align-items: center; gap: 10px; margin: 0 0 18px; }
+.head::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--hairline); }
+h2 { font-size: 13px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; margin: 0; }
+h2 .n { color: var(--accent); margin-right: 8px; font-weight: 400; }
+
+h3 {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  margin: 22px 0 6px;
+  color: var(--fg);
+}
+
+/* ------------------------------------------------- compact explanation
+ * 대시보드를 뺀 설명은 한 화면에 들어간다. 3 단으로 나누고 각 단은 짧은 목록
+ * 하나씩만 갖는다 — 문단을 늘리기 시작하면 한 화면 규칙이 먼저 깨진다. */
+
+.grid3 {
+  display: grid;
+  /* 명령줄이 가장 긴 마지막 단에 폭을 더 준다 — 균등 분할하면 pre 가 가로 스크롤한다. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.22fr);
+  border-top: 1px solid var(--hairline);
+  border-left: 1px solid var(--hairline);
+}
+.col {
+  border-right: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  padding: 13px 15px;
+  min-width: 0;
+}
+.col h3 { margin: 0 0 9px; }
+.col pre { font-size: 11px; padding: 9px 10px; margin-bottom: 0; }
+
+.kv { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.kv td { padding: 3px 0; border-bottom: 1px solid var(--hairline); }
+.kv td.n { text-align: right; font-weight: 700; white-space: nowrap; padding-left: 10px; }
+.kv tr:last-child td { border-bottom: 0; padding-top: 5px; border-top: 1px solid var(--hairline-strong); }
+.kv tr:last-child td:first-child { color: var(--fg); font-weight: 700; }
+
+.mini { list-style: none; margin: 0; padding: 0; font-size: 12.5px; counter-reset: r; }
+.mini li {
+  counter-increment: r;
+  position: relative;
+  padding: 3px 0 3px 25px;
+  border-bottom: 1px solid var(--hairline);
+}
+.mini li:last-child { border-bottom: 0; }
+.mini li::before {
+  content: counter(r, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 3px;
+  font-size: 11px;
+  color: var(--fg-label);
+}
+
+.tags { font-size: 12.5px; color: var(--fg-dim); margin: 0 0 10px; }
+.tags b { color: var(--fg); font-weight: 700; }
+
+.fine { font-size: 11.5px; line-height: 1.55; color: var(--fg-label); margin: 9px 0 0; }
+.fine b { color: var(--fg-dim); font-weight: 400; }
+
+.strip {
+  border: 1px solid var(--hairline);
+  border-top: 0;
+  padding: 11px 15px;
+  font-size: 12.5px;
+  color: var(--fg-dim);
+}
+.strip b { color: var(--fg); font-weight: 700; }
+
+/* ----------------------------------------------------------------- code */
+
+pre {
+  margin: 0 0 8px;
+  padding: 9px 12px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--hairline);
+  border-left: 2px solid var(--hairline-strong);
+  font-family: var(--font);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--fg);
+  overflow-x: auto;
+}
+pre .c { color: var(--fg-label); }
+code { font-family: var(--font); font-size: .94em; color: var(--accent); }
+
+/* =================================================== dashboard preview ==
+ * ficc/static/app.css 의 규범을 그대로 옮긴 정적 재현이다. 실제 화면은
+ * 페이지가 스크롤하지 않지만, 이 미리보기는 좁은 화면에서 가로 스크롤한다. */
+
+/* 데스크는 1240px 고정이다 (블로터 11 열이 접히면 안 된다). 본문 단(1180px)보다
+ * 넓으므로 프레임만 밖으로 빼서 가운데 정렬한다. 화면이 그보다 좁으면 프레임 안에서
+ * 가로 스크롤한다 — 페이지 자체는 가로로 스크롤하지 않는다. */
+.screen-frame {
+  border: 1px solid var(--hairline-strong);
+  overflow-x: auto;
+  background: var(--bg);
+  width: min(1292px, calc(100vw - 48px));
+  margin-left: 50%;
+  transform: translateX(-50%);
+}
+.desk {
+  display: grid;
+  width: 1240px;
+  grid-template-columns: 286px minmax(0, 1fr) 358px;
+  grid-template-rows: 34px 272px 190px 320px;
+  grid-template-areas:
+    "topbar  topbar   topbar"
+    "night   snapshot routine"
+    "journal snapshot events"
+    "blotter blotter  watch";
+  background: var(--bg);
+  font-size: 13px;
+  line-height: 1.35;
+}
+.desk .a-topbar   { grid-area: topbar; }
+.desk .a-night    { grid-area: night; }
+.desk .a-journal  { grid-area: journal; }
+.desk .a-snapshot { grid-area: snapshot; }
+.desk .a-routine  { grid-area: routine; }
+.desk .a-events   { grid-area: events; }
+.desk .a-blotter  { grid-area: blotter; }
+.desk .a-watch    { grid-area: watch; }
+
+.desk .panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  padding: 0;
+}
+.desk .a-routine, .desk .a-events, .desk .a-watch { border-right: 0; }
+.desk .a-blotter, .desk .a-watch { border-bottom: 0; }
+.desk .panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 22px;
+  flex: 0 0 22px;
+  padding: 0 8px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--hairline);
+}
+.desk .panel__body { flex: 1 1 auto; min-height: 0; overflow: hidden; padding: 6px 8px; }
+.desk .panel__body--flush { padding: 0; }
+.desk .cap { font-size: 11px; letter-spacing: .09em; color: var(--fg-label); text-transform: none; }
+.desk .cap--tiny { font-size: 10px; letter-spacing: .08em; }
+.desk .cap--en { text-transform: uppercase; }
+
+/* topbar */
+.desk .topbar {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 12px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--hairline-strong);
+}
+.desk .topbar__date { font-size: 15px; font-weight: 700; letter-spacing: .04em; }
+.desk .topbar__item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 0 12px;
+  border-left: 1px solid var(--hairline);
+  margin-left: 12px;
+}
+.desk .topbar__k { font-size: 10px; letter-spacing: .09em; color: var(--fg-label); text-transform: uppercase; }
+.desk .topbar__v { font-size: 14px; font-weight: 700; }
+.desk .topbar__v--attn { color: var(--accent); }
+.desk .topbar__spacer { flex: 1 1 auto; }
+.desk .convention {
+  font-size: 11px;
+  letter-spacing: .08em;
+  color: var(--fg-dim);
+  border: 1px solid var(--hairline-strong);
+  padding: 1px 8px;
+}
+.desk .convention__up   { color: var(--dir-up); }
+.desk .convention__down { color: var(--dir-down); }
+
+/* snapshot */
+.desk .group + .group { margin-top: 6px; }
+.desk .group__head { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; }
+.desk .group__head::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--hairline); }
+.desk .grid-cells {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--hairline);
+  border-left: 1px solid var(--hairline);
+}
+.desk .cell {
+  min-height: 44px;
+  padding: 3px 7px 4px;
+  border-right: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+}
+.desk .cell__label {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 10px;
+  letter-spacing: .08em;
+  color: var(--fg-label);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.desk .cell__mark { color: var(--fg-dim); }
+.desk .cell__row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.desk .cell__value { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+.desk .cell__delta { font-size: 12px; flex: 0 0 auto; }
+.desk .cell__asof { font-size: 9px; letter-spacing: .06em; color: var(--fg-label); }
+.desk .cell--derived { background: var(--bg-sunken); }
+.desk .cell--miss .cell__value { font-size: 12px; font-weight: 400; color: var(--fg-dim); }
+.desk .dir-up   { color: var(--dir-up); }
+.desk .dir-down { color: var(--dir-down); }
+.desk .dir-flat { color: var(--fg-dim); }
+.desk .dir-na   { color: var(--fg-label); }
+
+/* text fields */
+.desk .field + .field { margin-top: 7px; }
+.desk .field__label { display: block; margin-bottom: 3px; }
+.desk .field__box {
+  background: var(--bg-sunken);
+  border: 1px solid var(--hairline);
+  color: var(--fg);
+  font-size: 12px;
+  line-height: 1.45;
+  padding: 5px 7px;
+  overflow: hidden;
+}
+.desk .field__box--ph { color: var(--fg-label); }
+/* 실제 템플릿과 같은 규칙 — 마지막 입력칸이 남은 높이를 먹는다. */
+.desk .stack { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.desk .stack > .field--grow { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.desk .stack > .field--grow .field__box { flex: 1 1 auto; min-height: 0; }
+
+/* routine */
+.desk .routine { display: flex; align-items: center; gap: 8px; height: 24px; border-bottom: 1px solid var(--hairline); font-size: 12px; }
+.desk .routine__box { width: 12px; text-align: center; color: var(--fg-label); }
+.desk .routine--done .routine__box, .desk .routine--done .routine__label { color: var(--fg-dim); }
+.desk .routine__label { flex: 1 1 auto; overflow: hidden; white-space: nowrap; }
+.desk .subhead { display: flex; align-items: center; gap: 8px; margin: 8px 0 3px; }
+.desk .subhead::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--hairline); }
+.desk .weekly { display: flex; align-items: center; gap: 8px; font-size: 12px; height: 21px; }
+.desk .weekly__day { color: var(--accent); width: 22px; flex: 0 0 22px; }
+.desk .weekly__label { flex: 1 1 auto; color: var(--fg-dim); overflow: hidden; white-space: nowrap; }
+.desk .weekly__box { flex: 0 0 12px; text-align: center; color: var(--fg-label); }
+
+/* events */
+.desk .event {
+  display: grid;
+  grid-template-columns: 44px 26px minmax(0, 1fr);
+  gap: 0 7px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 12px;
+}
+.desk .event__date { color: var(--fg-dim); }
+.desk .event__region { color: var(--fg-label); font-size: 10px; letter-spacing: .08em; }
+.desk .event__name { overflow: hidden; white-space: nowrap; }
+.desk .event__lines { grid-column: 3; font-size: 11px; }
+.desk .event__line { display: flex; gap: 6px; color: var(--fg-dim); }
+.desk .event__k { color: var(--fg-label); flex: 0 0 auto; }
+.desk .event__call--hit { color: var(--fg); }
+.desk .event--past .event__name { color: var(--fg-dim); }
+
+/* blotter */
+.desk .blotter { width: 100%; border-collapse: collapse; font-size: 12px; }
+.desk .blotter thead th {
+  height: 24px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--hairline-strong);
+  padding: 0 8px;
+  text-align: right;
+  font-weight: 400;
+  font-size: 10px;
+  letter-spacing: .09em;
+  color: var(--fg-label);
+  white-space: nowrap;
+}
+.desk .blotter tbody td {
+  height: 32px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--hairline);
+  text-align: right;
+  white-space: nowrap;
+}
+.desk .blotter .t-l { text-align: left; }
+.desk .blotter .t-c { text-align: center; }
+.desk .blotter tbody td.strong { font-weight: 700; font-size: 13px; }
+.desk .blotter__code { color: var(--fg-dim); }
+.desk .blotter__tag { font-size: 10px; letter-spacing: .08em; color: var(--fg-label); border: 1px solid var(--hairline-strong); padding: 1px 4px; }
+.desk .blotter tr.is-broken td { background: var(--broken-bg); color: var(--broken-fg); }
+.desk .blotter tr.is-broken td:first-child { box-shadow: inset 3px 0 0 var(--broken-bar); }
+.desk .blotter tr.is-shaky .state-dot { color: var(--accent); }
+.desk .state-dot { color: var(--fg-dim); }
+.desk .ghost-btn { font-size: 11px; letter-spacing: .06em; color: var(--fg-dim); border: 1px solid var(--hairline-strong); padding: 1px 8px; }
+
+/* watch — the signature panel */
+.desk .a-watch { border-left: 3px solid var(--accent); }
+.desk .a-watch .panel__head {
+  height: 28px;
+  flex-basis: 28px;
+  background: var(--accent-weak);
+  border-bottom: 1px solid var(--accent-line);
+}
+.desk .watch__title { font-size: 14px; font-weight: 700; letter-spacing: .14em; color: var(--accent); }
+.desk .wpos { border-bottom: 1px solid var(--hairline); padding: 5px 0 6px; }
+.desk .wpos:first-child { padding-top: 2px; }
+.desk .wpos__head { display: flex; align-items: baseline; gap: 7px; }
+.desk .wpos__code { color: var(--fg-dim); font-size: 11px; }
+.desk .wpos__name { flex: 1 1 auto; font-size: 12px; font-weight: 700; overflow: hidden; white-space: nowrap; }
+.desk .wpos__meta { display: flex; gap: 10px; font-size: 11px; color: var(--fg-dim); margin: 1px 0 4px; }
+.desk .cond { padding: 3px 0 3px 8px; border-left: 1px solid var(--hairline); margin-top: 3px; }
+.desk .cond__text { font-size: 12px; line-height: 1.3; }
+.desk .cond__toggle { display: flex; gap: 12px; margin-top: 2px; }
+.desk .cond__opt { font-size: 11px; letter-spacing: .04em; color: var(--fg-label); }
+.desk .cond__opt--on { color: var(--fg-dim); }
+.desk .cond__opt--shaky.cond__opt--on { color: var(--accent); }
+.desk .cond__opt--broken.cond__opt--on { color: var(--broken-bar); }
+.desk .cond--broken { background: var(--broken-bg); border-left: 3px solid var(--broken-bar); padding-left: 6px; }
+.desk .cond--broken .cond__text { color: var(--broken-fg); }
+.desk .cond--unchecked { border-left-color: var(--accent-line); }
+.desk .cond--unchecked .cond__text { color: var(--fg-dim); }
+.desk .watch__foot {
+  padding: 5px 8px;
+  border-top: 1px solid var(--hairline);
+  font-size: 11px;
+  letter-spacing: .06em;
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+
+.caption { font-size: 12px; color: var(--fg-label); margin: 10px 0 0; max-width: 88ch; line-height: 1.6; }
+.caption b { color: var(--fg-dim); font-weight: 400; }
+
+/* --------------------------------------------------------------- footer */
+
+footer { border-top: 1px solid var(--hairline-strong); background: var(--bg-raised); }
+.footer__inner { padding: 26px 0 34px; display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: baseline; }
+.footer__note { font-size: 12px; color: var(--fg-label); flex: 1 1 320px; margin: 0; }
+
+/* 한 화면 규칙은 데스크톱 전제다. 좁아지면 3 단을 세로로 쌓고 스크롤을 허용한다. */
+@media (max-width: 1040px) {
+  .grid3 { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 720px) {
+  .masthead__inner { padding-top: 32px; }
+  h1 { font-size: 26px; }
+  .lede { font-size: 15px; }
+  .meta__item { padding: 0 10px; }
+  section { padding: 30px 0; }
+}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap masthead__inner">
+    <h1>ficc-desk<span class="dot">.</span></h1>
+    <p class="lede">A one-person, local dashboard for running a FICC trading desk routine.</p>
+    <p class="sub">Rates, FX and credit on one screen — next to the log that says whether the discipline held. No real money: every position is paper. The output is not P&amp;L, it is the record.</p>
+
+    <div class="meta">
+      <span class="meta__item"><b>Python 3.14</b> · FastAPI · SQLite</span>
+      <span class="meta__item"><b>51</b> fields on one screen</span>
+      <span class="meta__item"><b>157</b> tests</span>
+      <span class="meta__item">no build step</span>
+    </div>
+
+    <!-- ⚠ USERNAME/REPO 를 실제 저장소 주소로 바꾼다 -->
+    <nav class="links">
+      <a class="btn btn--go" href="https://github.com/USERNAME/REPO">Repository</a>
+      <a class="btn" href="https://github.com/USERNAME/REPO/blob/main/SPEC.md">SPEC.md — design</a>
+      <a class="btn" href="https://github.com/USERNAME/REPO/blob/main/CLAUDE.md">CLAUDE.md — rules</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section>
+  <div class="head"><h2><span class="n">01</span>The screen</h2></div>
+  <div class="prose">
+    <p>Eight panels on a fixed grid, sized so a whole working day fits in one viewport. The page never scrolls; only the inside of a panel does. Every number is edited in place.</p>
+
+  <div class="screen-frame">
+    <div class="desk">
+
+      <div class="topbar a-topbar">
+        <span class="topbar__date">2026-08-11 TUE</span>
+        <span class="topbar__item"><span class="topbar__k">streak</span><span class="topbar__v">D+47</span></span>
+        <span class="topbar__item"><span class="topbar__k">undone</span><span class="topbar__v">2/5</span></span>
+        <span class="topbar__item"><span class="topbar__k">data</span><span class="topbar__v">07:02 KST</span></span>
+        <span class="topbar__item"><span class="topbar__k">manual</span><span class="topbar__v">5</span></span>
+        <span class="topbar__item"><span class="topbar__k">miss</span><span class="topbar__v">2</span></span>
+        <span class="topbar__item"><span class="topbar__k">unchecked</span><span class="topbar__v topbar__v--attn">1</span></span>
+        <span class="topbar__spacer"></span>
+        <span class="convention">국내색상 <span class="convention__up">▲</span><span class="convention__down">▼</span></span>
+      </div>
+
+      <div class="panel a-night">
+        <div class="panel__head"><span class="cap">야간장 리뷰</span></div>
+        <div class="panel__body stack">
+          <div class="field">
+            <span class="cap cap--tiny cap--en field__label">NY</span>
+            <div class="field__box">장 초반 CPI 프리뷰로 금리 상승 출발. 3년 입찰이 테일 0.4bp 로 무난히 소화되며 되돌림, 10년 4.18% 마감. 커브는 2bp 스팁.</div>
+          </div>
+          <div class="field field--grow">
+            <span class="cap cap--tiny cap--en field__label">LDN</span>
+            <div class="field__box">길트 30년 발행 부담에 초장기 약세. 분트는 보합권.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel a-snapshot">
+        <div class="panel__head"><span class="cap">마켓 스냅샷</span><span class="cap cap--tiny">41 저장 + 10 파생</span></div>
+        <div class="panel__body">
+
+          <div class="group">
+            <div class="group__head"><span class="cap">정책·단기금리</span></div>
+            <div class="grid-cells">
+              <div class="cell"><span class="cell__label">BOK BASE</span><span class="cell__row"><span class="cell__value">2.50</span><span class="cell__delta dir-flat">0.0</span></span><span class="cell__asof">08-10</span></div>
+              <div class="cell"><span class="cell__label">KOFR</span><span class="cell__row"><span class="cell__value">2.478</span><span class="cell__delta dir-down">-0.3</span></span><span class="cell__asof">08-10</span></div>
+              <div class="cell"><span class="cell__label">CD91D</span><span class="cell__row"><span class="cell__value">3.070</span><span class="cell__delta dir-na">—</span></span><span class="cell__asof">08-08</span></div>
+              <div class="cell"><span class="cell__label">CP91D</span><span class="cell__row"><span class="cell__value">3.190</span><span class="cell__delta dir-up">+1.0</span></span></div>
+              <div class="cell"><span class="cell__label">MSB1Y</span><span class="cell__row"><span class="cell__value">2.760</span><span class="cell__delta dir-up">+0.5</span></span></div>
+              <div class="cell cell--derived"><span class="cell__label">CD-KOFR</span><span class="cell__row"><span class="cell__value">59.2</span><span class="cell__delta dir-up">+0.3</span></span></div>
+            </div>
+          </div>
+
+          <div class="group">
+            <div class="group__head"><span class="cap">원화금리</span></div>
+            <div class="grid-cells">
+              <div class="cell"><span class="cell__label">국고1Y</span><span class="cell__row"><span class="cell__value">2.700</span><span class="cell__delta dir-up">+0.4</span></span></div>
+              <div class="cell"><span class="cell__label">국고3Y</span><span class="cell__row"><span class="cell__value">2.845</span><span class="cell__delta dir-up">+1.2</span></span></div>
+              <div class="cell"><span class="cell__label">국고5Y</span><span class="cell__row"><span class="cell__value">2.980</span><span class="cell__delta dir-up">+1.6</span></span></div>
+              <div class="cell"><span class="cell__label">국고10Y</span><span class="cell__row"><span class="cell__value">3.120</span><span class="cell__delta dir-up">+2.0</span></span></div>
+              <div class="cell"><span class="cell__label">국고20Y</span><span class="cell__row"><span class="cell__value">3.180</span><span class="cell__delta dir-up">+2.4</span></span></div>
+              <div class="cell"><span class="cell__label">국고30Y</span><span class="cell__row"><span class="cell__value">3.150</span><span class="cell__delta dir-up">+2.6</span></span></div>
+              <div class="cell cell--derived"><span class="cell__label">3-10</span><span class="cell__row"><span class="cell__value">27.5</span><span class="cell__delta dir-up">+0.8</span></span></div>
+              <div class="cell cell--derived"><span class="cell__label">10-30</span><span class="cell__row"><span class="cell__value">3.0</span><span class="cell__delta dir-up">+0.6</span></span></div>
+              <div class="cell cell--derived"><span class="cell__label">3Y-기준</span><span class="cell__row"><span class="cell__value">34.5</span><span class="cell__delta dir-up">+1.2</span></span></div>
+            </div>
+          </div>
+
+          <div class="group">
+            <div class="group__head"><span class="cap">국채선물</span></div>
+            <div class="grid-cells">
+              <div class="cell"><span class="cell__label">KTBF3Y</span><span class="cell__row"><span class="cell__value">106.12</span><span class="cell__delta dir-down">-4.0</span></span><span class="cell__asof">08-10</span></div>
+              <div class="cell cell--miss"><span class="cell__label">KTBF10Y</span><span class="cell__row"><span class="cell__value">미수집</span></span></div>
+              <div class="cell"><span class="cell__label">KTBF30Y</span><span class="cell__row"><span class="cell__value">120.45</span><span class="cell__delta dir-down">-9.0</span></span><span class="cell__asof">08-10</span></div>
+            </div>
+          </div>
+
+          <div class="group">
+            <div class="group__head"><span class="cap">스왑</span></div>
+            <div class="grid-cells">
+              <div class="cell"><span class="cell__label">IRS1Y <span class="cell__mark">ᴹ</span></span><span class="cell__row"><span class="cell__value">2.780</span><span class="cell__delta dir-down">-0.5</span></span></div>
+              <div class="cell cell--miss"><span class="cell__label">IRS3Y <span class="cell__mark">ᴹ</span></span><span class="cell__row"><span class="cell__value">미수집</span></span></div>
+              <div class="cell cell--derived cell--miss"><span class="cell__label">B/S 3Y</span><span class="cell__row"><span class="cell__value">계산 불가</span></span></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="panel a-routine">
+        <div class="panel__head"><span class="cap">오늘의 루틴</span></div>
+        <div class="panel__body">
+          <div class="routine routine--done"><span class="routine__box">☑</span><span class="routine__label">야간장 리뷰 (뉴욕/런던)</span></div>
+          <div class="routine routine--done"><span class="routine__box">☑</span><span class="routine__label">마켓 스냅샷</span></div>
+          <div class="routine"><span class="routine__box">☐</span><span class="routine__label">왜 움직였나 한 문장</span></div>
+          <div class="routine"><span class="routine__box">☐</span><span class="routine__label">영문 시황 브리핑</span></div>
+          <div class="routine routine--done"><span class="routine__box">☑</span><span class="routine__label">무효화 조건 점검</span></div>
+          <div class="subhead"><span class="cap cap--tiny">이번 주</span></div>
+          <div class="weekly"><span class="weekly__day">WED</span><span class="weekly__label">shadowing 아이디어 1건</span><span class="weekly__box">☐</span></div>
+          <div class="weekly"><span class="weekly__day">FRI</span><span class="weekly__label">주간 리뷰</span><span class="weekly__box">☐</span></div>
+          <div class="weekly"><span class="weekly__day">FRI</span><span class="weekly__label">리스크 60초 즉답 드릴</span><span class="weekly__box">☐</span></div>
+        </div>
+      </div>
+
+      <div class="panel a-journal">
+        <div class="panel__head"><span class="cap">왜 움직였나 · 영문 브리핑</span></div>
+        <div class="panel__body stack">
+          <div class="field">
+            <span class="cap cap--tiny field__label">왜 움직였나 (한 문장)</span>
+            <div class="field__box field__box--ph">오늘 시장이 왜 움직였나 — 한 문장</div>
+          </div>
+          <div class="field field--grow">
+            <span class="cap cap--tiny field__label">영문 시황 브리핑</span>
+            <div class="field__box field__box--ph">Write today's market brief in English.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel a-events">
+        <div class="panel__head"><span class="cap">이벤트 캘린더</span></div>
+        <div class="panel__body">
+          <div class="event event--past">
+            <span class="event__date">08-10</span><span class="event__region">US</span><span class="event__name">3년 국채 입찰</span>
+            <span class="event__lines"><span class="event__line"><span class="event__k">예상</span>테일 소폭<span class="event__call--hit">· hit</span></span></span>
+          </div>
+          <div class="event">
+            <span class="event__date">08-12</span><span class="event__region">KR</span><span class="event__name">금통위</span>
+            <span class="event__lines"><span class="event__line"><span class="event__k">컨센</span>동결</span><span class="event__line"><span class="event__k">예상</span>동결, 인하 소수의견 1</span></span>
+          </div>
+          <div class="event">
+            <span class="event__date">08-13</span><span class="event__region">US</span><span class="event__name">CPI (7월)</span>
+            <span class="event__lines"><span class="event__line"><span class="event__k">컨센</span>+0.3% MoM</span><span class="event__line"><span class="event__k">예상</span>+0.2% MoM</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel a-blotter">
+        <div class="panel__head"><span class="cap">활성 포지션 블로터</span><span class="ghost-btn">새 아이디어 (N)</span></div>
+        <div class="panel__body panel__body--flush">
+          <table class="blotter">
+            <thead>
+              <tr>
+                <th class="t-l">ID</th><th class="t-l">포지션</th><th class="t-c">전략</th>
+                <th>진입</th><th>현재</th><th>손익 BP</th><th>목표 / 손절</th>
+                <th>DV01</th><th class="t-l">수급 주체</th><th>보유</th><th class="t-c">상태</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="is-shaky">
+                <td class="t-l blotter__code">IDEA-012</td>
+                <td class="t-l" style="width:100%">국고 3-10 스티프너 (3년 매수/10년 매도)</td>
+                <td class="t-c"><span class="blotter__tag">MOM</span></td>
+                <td>45.0</td><td>27.5</td>
+                <td class="strong dir-down">-17.5</td>
+                <td>60.0 / 38.0</td><td>30.0M</td>
+                <td class="t-l">보험사 장기물 매수</td><td>D+3</td>
+                <td class="t-c"><span class="state-dot">●</span> 흔들림</td>
+              </tr>
+              <tr class="is-broken">
+                <td class="t-l blotter__code">IDEA-013</td>
+                <td class="t-l">UST-KTB 10년 스프레드 축소</td>
+                <td class="t-c"><span class="blotter__tag">MR</span></td>
+                <td>118.0</td><td>120.5 <span class="cell__mark">ᴹ</span></td>
+                <td class="strong">+2.5</td>
+                <td>130.0 / 112.0</td><td>20.0M</td>
+                <td class="t-l">외사 조달 데스크</td><td>D+9</td>
+                <td class="t-c"><span class="state-dot">●</span> 깨짐</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel a-watch">
+        <div class="panel__head"><span class="watch__title">무효화 조건 워치</span></div>
+        <div class="panel__body">
+          <div class="wpos">
+            <div class="wpos__head"><span class="wpos__code">IDEA-012</span><span class="wpos__name">국고 3-10 스티프너</span></div>
+            <div class="wpos__meta"><span>D+3</span><span class="dir-down">-17.5 bp</span><span>목표 60.0 / 손절 38.0</span></div>
+            <div class="cond">
+              <div class="cond__text">금통위가 매파로 선회 (의사록에 인상 소수의견)</div>
+              <div class="cond__toggle"><span class="cond__opt">○ 유효</span><span class="cond__opt cond__opt--shaky cond__opt--on">◉ 흔들림</span><span class="cond__opt">○ 깨짐</span></div>
+            </div>
+            <div class="cond">
+              <div class="cond__text">10년 입찰이 3회 연속 강하게 소화</div>
+              <div class="cond__toggle"><span class="cond__opt cond__opt--on">◉ 유효</span><span class="cond__opt">○ 흔들림</span><span class="cond__opt">○ 깨짐</span></div>
+            </div>
+          </div>
+          <div class="wpos">
+            <div class="wpos__head"><span class="wpos__code">IDEA-013</span><span class="wpos__name">UST-KTB 10년 스프레드 축소</span></div>
+            <div class="wpos__meta"><span>D+9</span><span class="dir-up">+2.5 bp</span><span>목표 130.0 / 손절 112.0</span></div>
+            <div class="cond cond--broken">
+              <div class="cond__text">미 근원 CPI 가 3개월 연속 컨센서스 상회</div>
+              <div class="cond__toggle"><span class="cond__opt">○ 유효</span><span class="cond__opt">○ 흔들림</span><span class="cond__opt cond__opt--broken cond__opt--on">◉ 깨짐</span></div>
+            </div>
+            <div class="cond cond--unchecked">
+              <div class="cond__text">연준 인사 발언 톤이 완화로 돌아섬</div>
+              <div class="cond__toggle"><span class="cond__opt">○ 유효</span><span class="cond__opt">○ 흔들림</span><span class="cond__opt">○ 깨짐</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="watch__foot">오늘 미점검 조건 1건</div>
+      </div>
+
+    </div>
+  </div>
+
+  <p class="caption"><b>Static reproduction with fixture data — not live market values. The interface is in Korean.</b> Left to right: last night's session review, the market snapshot, the routine checklist; then the position blotter and, bordered in amber, the invalidation watch.</p>
+</section>
+
+<section>
+  <div class="head"><h2><span class="n">02</span>How it works</h2></div>
+
+  <div class="grid3">
+
+    <div class="col">
+      <h3>What it collects</h3>
+      <table class="kv">
+        <tr><td>ECOS · Bank of Korea</td><td class="n">16</td></tr>
+        <tr><td>FRED · St. Louis Fed</td><td class="n">13</td></tr>
+        <tr><td>KRX Data Marketplace</td><td class="n">5</td></tr>
+        <tr><td>Manual entry</td><td class="n">7</td></tr>
+        <tr><td>Derived on read</td><td class="n">10</td></tr>
+        <tr><td>On screen</td><td class="n">51</td></tr>
+      </table>
+      <p class="fine">Collected three times a day into a local SQLite file. 41 stored, 10 computed on read and never written. A field stays manual until a real API call proves the endpoint — <b>DXY has no free API, so it is typed in rather than faked from a different index.</b></p>
+    </div>
+
+    <div class="col">
+      <h3>Seven rules</h3>
+      <ol class="mini">
+        <li>Missing is never zero.</li>
+        <li>Derived values are never stored.</li>
+        <li>API specs are never guessed.</li>
+        <li>The observation log is append-only.</li>
+        <li>No vault file is ever deleted.</li>
+        <li>Collection failure is a normal condition.</li>
+        <li>No idea without an invalidation condition.</li>
+      </ol>
+      <p class="fine">The dashboard is disposable; the time series is not. <b>Breaking one of these corrupts data quietly rather than raising an error.</b></p>
+    </div>
+
+    <div class="col">
+      <h3>Run it</h3>
+      <p class="tags"><b>FastAPI</b> · Jinja2 · <b>SQLite</b> (WAL) · plain JS · pytest <b>157</b><br>No Node, no ORM, no build step.</p>
+<pre>python -m venv .venv
+.venv\Scripts\python -m pip install -r requirements.txt
+copy .env.example .env
+.venv\Scripts\python -m uvicorn ficc.app:app --port 8787</pre>
+      <p class="fine">Migrations apply themselves on boot. <b>Empty keys are fine — that source is skipped and every other one still collects.</b></p>
+    </div>
+
+  </div>
+
+  <div class="strip">
+    <b>Design.</b> Zero corner radius, no shadows, no gradients, one amber accent used by area in exactly one place — the invalidation watch. Colour shows direction, never judgement: a rate going up is neither good nor bad, and the up-red / up-green convention is a setting. Nothing is gamified — the streak is a bare number, and an empty state gives the next command instead of an apology.
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap footer__inner">
+    <p class="footer__note">No real money. Every position is paper. The point is the record, not the return.</p>
+    <!-- ⚠ USERNAME/REPO 를 실제 저장소 주소로 바꾼다 -->
+    <a class="btn btn--go" href="https://github.com/USERNAME/REPO">Source on GitHub</a>
+  </div>
+</footer>
+
+</body>
+</html>
