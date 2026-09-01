@@ -5,7 +5,7 @@ and credit on one screen — next to the log that says whether the discipline he
 
 No real money: every position is paper. The output is not P&L, it is the record.
 
-### ▶ [Open the dashboard](https://seungkeemin.github.io/)
+### ▶ [Open the dashboard](https://seungkeemin.github.io/ficc-desk/)
 
 Eight panels on a fixed grid, sized so a whole working day fits in one viewport.
 The page never scrolls; only the inside of a panel does. Every number is edited in
