@@ -1,21 +1,22 @@
 <!DOCTYPE html>
 <!--
-  ficc-desk 랜딩 페이지 (GitHub Pages).
+  ficc-desk 대시보드 화면 (GitHub Pages).
 
+  설명은 README.md 에 있고 이 파일은 화면만 보여준다.
   Settings > Pages > Source: Deploy from a branch > main + / (root)
 
-  ⚠ 아래 저장소 주소 4곳을 실제 주소로 바꾼다. "USERNAME/REPO" 로 검색하면 전부 나온다.
+  ⚠ 저장소 주소 1곳을 실제 주소로 바꾼다.
 
-  이 파일은 앱과 같은 디자인 토큰을 쓰지만 ficc/static/app.css 를 참조하지 않는다 —
-  Pages 는 정적 파일만 서빙하고 /static/ 경로가 없기 때문이다. 토큰을 바꿀 일이 생기면
-  app.css 와 이 파일 두 곳을 같이 고친다.
+  앱과 같은 디자인 토큰을 인라인으로 복제했다 — Pages 에는 /static/ 경로가 없어
+  ficc/static/app.css 를 참조할 수 없다. 토큰을 바꿀 일이 생기면 두 곳을 같이 고친다.
+  값은 ficc/demo.py 픽스처다. 실제 시장 값이 아니다.
 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ficc-desk — a FICC desk routine, in one screen</title>
-<meta name="description" content="A one-person local dashboard for running a FICC trading desk routine. Rates, FX and credit on one screen, next to the log that says whether the discipline held.">
+<title>ficc-desk — the daily screen</title>
+<meta name="description" content="The ficc-desk dashboard: eight panels on one screen — market snapshot, routine checklist, position blotter and invalidation watch.">
 <style>
 :root {
   --bg:            #0E1013;
@@ -55,173 +56,67 @@ body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font);
-  font-size: 14px;
-  line-height: 1.65;
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
-}
-::selection { background: var(--accent-weak); }
-
-a { color: var(--fg); text-decoration: none; border-bottom: 1px solid var(--hairline-strong); }
-a:hover { color: var(--accent); border-bottom-color: var(--accent-line); }
-
-.wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
-.prose { max-width: 74ch; }
-p { margin: 0 0 14px; }
-p:last-child { margin-bottom: 0; }
-
-.cap {
-  font-size: 11px;
-  letter-spacing: .09em;
-  color: var(--fg-label);
-  text-transform: uppercase;
-  white-space: nowrap;
+  /* 데스크(1240px)가 화면보다 넓으면 페이지가 가로로 스크롤한다. body 를 그 폭까지
+   * 늘려 두어야 상단 바 배경이 스크롤한 만큼 같이 따라온다 — 이게 없으면 오른쪽으로
+   * 스크롤했을 때 바만 화면 폭에서 끊긴다. */
+  min-width: max-content;
 }
 
-/* ------------------------------------------------------------- masthead */
+/* ------------------------------------------------------------------ 상단 바 */
 
-.masthead { border-bottom: 1px solid var(--hairline-strong); background: var(--bg-raised); }
-.masthead__inner { padding-top: 44px; padding-bottom: 30px; }
-h1 {
-  font-size: 34px;
-  font-weight: 700;
-  letter-spacing: .01em;
-  margin: 0 0 4px;
+.bar {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 14px;
+  padding: 11px 24px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--hairline-strong);
 }
-h1 .dot { color: var(--accent); }
-.lede { font-size: 16px; color: var(--fg); margin: 0 0 6px; max-width: 70ch; }
-.sub  { font-size: 14px; color: var(--fg-dim); margin: 0 0 22px; max-width: 70ch; }
-
-.meta { display: flex; flex-wrap: wrap; margin: 0 0 20px; }
-.meta__item {
-  padding: 0 14px;
-  border-left: 1px solid var(--hairline);
-  font-size: 12px;
-  color: var(--fg-dim);
-}
-.meta__item:first-child { padding-left: 0; border-left: 0; }
-.meta__item b { color: var(--fg); font-weight: 700; }
-
-.links { display: flex; flex-wrap: wrap; gap: 8px; }
-.btn {
-  display: inline-block;
-  padding: 4px 12px;
+.bar__name { font-size: 15px; font-weight: 700; letter-spacing: .01em; }
+.bar__name .dot { color: var(--accent); }
+.bar__sub { font-size: 12px; color: var(--fg-dim); }
+.bar__spacer { flex: 1 1 auto; }
+.bar a {
   font-size: 12px;
   letter-spacing: .06em;
-  color: var(--fg-dim);
+  color: var(--accent);
+  text-decoration: none;
+  border: 1px solid var(--accent-line);
+  padding: 3px 11px;
+  white-space: nowrap;
+}
+.bar a:hover { background: var(--accent-weak); }
+
+/* -------------------------------------------------------------------- 무대
+ * 데스크는 1240px 고정이다 (블로터 11 열이 접히면 안 된다). 화면이 그보다 넓으면
+ * margin auto 가 가운데로 놓고, 좁으면 auto 가 0 이 되어 페이지가 가로로 스크롤한다.
+ * overflow 컨테이너 안에서 margin auto 로 가운데 정렬하면 넘칠 때 왼쪽이 잘리므로
+ * (스크롤해도 왼쪽 끝에 닿지 못한다) 프레임을 스크롤 상자에 넣지 않는다.
+ * .stage 의 min-width 가 없으면 스크롤한 뒤 오른쪽 여백이 사라진다. */
+
+.stage { padding: 22px 24px 30px; }
+.frame {
+  width: max-content;
+  margin: 0 auto;
   border: 1px solid var(--hairline-strong);
+  background: var(--bg);
 }
-.btn:hover { color: var(--fg); border-color: var(--accent-line); }
-.btn--go { color: var(--accent); border-color: var(--accent-line); }
-
-/* -------------------------------------------------------------- section */
-
-section { padding: 40px 0; border-bottom: 1px solid var(--hairline); }
-main > section:last-of-type { border-bottom: 0; }
-
-.head { display: flex; align-items: center; gap: 10px; margin: 0 0 18px; }
-.head::after { content: ""; flex: 1 1 auto; height: 1px; background: var(--hairline); }
-h2 { font-size: 13px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; margin: 0; }
-h2 .n { color: var(--accent); margin-right: 8px; font-weight: 400; }
-
-h3 {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: .04em;
-  margin: 22px 0 6px;
-  color: var(--fg);
-}
-
-/* ------------------------------------------------- compact explanation
- * 대시보드를 뺀 설명은 한 화면에 들어간다. 3 단으로 나누고 각 단은 짧은 목록
- * 하나씩만 갖는다 — 문단을 늘리기 시작하면 한 화면 규칙이 먼저 깨진다. */
-
-.grid3 {
-  display: grid;
-  /* 명령줄이 가장 긴 마지막 단에 폭을 더 준다 — 균등 분할하면 pre 가 가로 스크롤한다. */
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.22fr);
-  border-top: 1px solid var(--hairline);
-  border-left: 1px solid var(--hairline);
-}
-.col {
-  border-right: 1px solid var(--hairline);
-  border-bottom: 1px solid var(--hairline);
-  padding: 13px 15px;
-  min-width: 0;
-}
-.col h3 { margin: 0 0 9px; }
-.col pre { font-size: 11px; padding: 9px 10px; margin-bottom: 0; }
-
-.kv { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-.kv td { padding: 3px 0; border-bottom: 1px solid var(--hairline); }
-.kv td.n { text-align: right; font-weight: 700; white-space: nowrap; padding-left: 10px; }
-.kv tr:last-child td { border-bottom: 0; padding-top: 5px; border-top: 1px solid var(--hairline-strong); }
-.kv tr:last-child td:first-child { color: var(--fg); font-weight: 700; }
-
-.mini { list-style: none; margin: 0; padding: 0; font-size: 12.5px; counter-reset: r; }
-.mini li {
-  counter-increment: r;
-  position: relative;
-  padding: 3px 0 3px 25px;
-  border-bottom: 1px solid var(--hairline);
-}
-.mini li:last-child { border-bottom: 0; }
-.mini li::before {
-  content: counter(r, decimal-leading-zero);
-  position: absolute;
-  left: 0;
-  top: 3px;
-  font-size: 11px;
+.note {
+  max-width: 1242px;
+  margin: 11px auto 0;
+  font-size: 12px;
+  line-height: 1.6;
   color: var(--fg-label);
 }
+.note b { color: var(--fg-dim); font-weight: 400; }
 
-.tags { font-size: 12.5px; color: var(--fg-dim); margin: 0 0 10px; }
-.tags b { color: var(--fg); font-weight: 700; }
+/* ============================================================ 대시보드 재현
+ * ficc/static/app.css 의 규범을 그대로 옮겼다. 실제 화면은 페이지가 스크롤하지
+ * 않지만, 여기서는 패널이 잘리지 않도록 행 높이를 조금 키웠다. */
 
-.fine { font-size: 11.5px; line-height: 1.55; color: var(--fg-label); margin: 9px 0 0; }
-.fine b { color: var(--fg-dim); font-weight: 400; }
-
-.strip {
-  border: 1px solid var(--hairline);
-  border-top: 0;
-  padding: 11px 15px;
-  font-size: 12.5px;
-  color: var(--fg-dim);
-}
-.strip b { color: var(--fg); font-weight: 700; }
-
-/* ----------------------------------------------------------------- code */
-
-pre {
-  margin: 0 0 8px;
-  padding: 9px 12px;
-  background: var(--bg-sunken);
-  border: 1px solid var(--hairline);
-  border-left: 2px solid var(--hairline-strong);
-  font-family: var(--font);
-  font-size: 12.5px;
-  line-height: 1.6;
-  color: var(--fg);
-  overflow-x: auto;
-}
-pre .c { color: var(--fg-label); }
-code { font-family: var(--font); font-size: .94em; color: var(--accent); }
-
-/* =================================================== dashboard preview ==
- * ficc/static/app.css 의 규범을 그대로 옮긴 정적 재현이다. 실제 화면은
- * 페이지가 스크롤하지 않지만, 이 미리보기는 좁은 화면에서 가로 스크롤한다. */
-
-/* 데스크는 1240px 고정이다 (블로터 11 열이 접히면 안 된다). 본문 단(1180px)보다
- * 넓으므로 프레임만 밖으로 빼서 가운데 정렬한다. 화면이 그보다 좁으면 프레임 안에서
- * 가로 스크롤한다 — 페이지 자체는 가로로 스크롤하지 않는다. */
-.screen-frame {
-  border: 1px solid var(--hairline-strong);
-  overflow-x: auto;
-  background: var(--bg);
-  width: min(1292px, calc(100vw - 48px));
-  margin-left: 50%;
-  transform: translateX(-50%);
-}
 .desk {
   display: grid;
   width: 1240px;
@@ -463,62 +358,20 @@ code { font-family: var(--font); font-size: .94em; color: var(--accent); }
   color: var(--accent);
   flex: 0 0 auto;
 }
-
-.caption { font-size: 12px; color: var(--fg-label); margin: 10px 0 0; max-width: 88ch; line-height: 1.6; }
-.caption b { color: var(--fg-dim); font-weight: 400; }
-
-/* --------------------------------------------------------------- footer */
-
-footer { border-top: 1px solid var(--hairline-strong); background: var(--bg-raised); }
-.footer__inner { padding: 26px 0 34px; display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: baseline; }
-.footer__note { font-size: 12px; color: var(--fg-label); flex: 1 1 320px; margin: 0; }
-
-/* 한 화면 규칙은 데스크톱 전제다. 좁아지면 3 단을 세로로 쌓고 스크롤을 허용한다. */
-@media (max-width: 1040px) {
-  .grid3 { grid-template-columns: minmax(0, 1fr); }
-}
-
-@media (max-width: 720px) {
-  .masthead__inner { padding-top: 32px; }
-  h1 { font-size: 26px; }
-  .lede { font-size: 15px; }
-  .meta__item { padding: 0 10px; }
-  section { padding: 30px 0; }
-}
 </style>
 </head>
 <body>
 
-<header class="masthead">
-  <div class="wrap masthead__inner">
-    <h1>ficc-desk<span class="dot">.</span></h1>
-    <p class="lede">A one-person, local dashboard for running a FICC trading desk routine.</p>
-    <p class="sub">Rates, FX and credit on one screen — next to the log that says whether the discipline held. No real money: every position is paper. The output is not P&amp;L, it is the record.</p>
-
-    <div class="meta">
-      <span class="meta__item"><b>Python 3.14</b> · FastAPI · SQLite</span>
-      <span class="meta__item"><b>51</b> fields on one screen</span>
-      <span class="meta__item"><b>157</b> tests</span>
-      <span class="meta__item">no build step</span>
-    </div>
-
-    <!-- ⚠ USERNAME/REPO 를 실제 저장소 주소로 바꾼다 -->
-    <nav class="links">
-      <a class="btn btn--go" href="https://github.com/USERNAME/REPO">Repository</a>
-      <a class="btn" href="https://github.com/USERNAME/REPO/blob/main/SPEC.md">SPEC.md — design</a>
-      <a class="btn" href="https://github.com/USERNAME/REPO/blob/main/CLAUDE.md">CLAUDE.md — rules</a>
-    </nav>
-  </div>
+<header class="bar">
+  <span class="bar__name">ficc-desk<span class="dot">.</span></span>
+  <span class="bar__sub">the daily screen — eight panels, one viewport</span>
+  <span class="bar__spacer"></span>
+  <!-- ⚠ 실제 저장소 주소로 바꾼다 -->
+  <a href="https://github.com/USERNAME/REPO">README ↗</a>
 </header>
 
-<main class="wrap">
-
-<section>
-  <div class="head"><h2><span class="n">01</span>The screen</h2></div>
-  <div class="prose">
-    <p>Eight panels on a fixed grid, sized so a whole working day fits in one viewport. The page never scrolls; only the inside of a panel does. Every number is edited in place.</p>
-
-  <div class="screen-frame">
+<div class="stage">
+  <div class="frame">
     <div class="desk">
 
       <div class="topbar a-topbar">
@@ -717,67 +570,11 @@ footer { border-top: 1px solid var(--hairline-strong); background: var(--bg-rais
     </div>
   </div>
 
-  <p class="caption"><b>Static reproduction with fixture data — not live market values. The interface is in Korean.</b> Left to right: last night's session review, the market snapshot, the routine checklist; then the position blotter and, bordered in amber, the invalidation watch.</p>
-</section>
-
-<section>
-  <div class="head"><h2><span class="n">02</span>How it works</h2></div>
-
-  <div class="grid3">
-
-    <div class="col">
-      <h3>What it collects</h3>
-      <table class="kv">
-        <tr><td>ECOS · Bank of Korea</td><td class="n">16</td></tr>
-        <tr><td>FRED · St. Louis Fed</td><td class="n">13</td></tr>
-        <tr><td>KRX Data Marketplace</td><td class="n">5</td></tr>
-        <tr><td>Manual entry</td><td class="n">7</td></tr>
-        <tr><td>Derived on read</td><td class="n">10</td></tr>
-        <tr><td>On screen</td><td class="n">51</td></tr>
-      </table>
-      <p class="fine">Collected three times a day into a local SQLite file. 41 stored, 10 computed on read and never written. A field stays manual until a real API call proves the endpoint — <b>DXY has no free API, so it is typed in rather than faked from a different index.</b></p>
-    </div>
-
-    <div class="col">
-      <h3>Seven rules</h3>
-      <ol class="mini">
-        <li>Missing is never zero.</li>
-        <li>Derived values are never stored.</li>
-        <li>API specs are never guessed.</li>
-        <li>The observation log is append-only.</li>
-        <li>No vault file is ever deleted.</li>
-        <li>Collection failure is a normal condition.</li>
-        <li>No idea without an invalidation condition.</li>
-      </ol>
-      <p class="fine">The dashboard is disposable; the time series is not. <b>Breaking one of these corrupts data quietly rather than raising an error.</b></p>
-    </div>
-
-    <div class="col">
-      <h3>Run it</h3>
-      <p class="tags"><b>FastAPI</b> · Jinja2 · <b>SQLite</b> (WAL) · plain JS · pytest <b>157</b><br>No Node, no ORM, no build step.</p>
-<pre>python -m venv .venv
-.venv\Scripts\python -m pip install -r requirements.txt
-copy .env.example .env
-.venv\Scripts\python -m uvicorn ficc.app:app --port 8787</pre>
-      <p class="fine">Migrations apply themselves on boot. <b>Empty keys are fine — that source is skipped and every other one still collects.</b></p>
-    </div>
-
-  </div>
-
-  <div class="strip">
-    <b>Design.</b> Zero corner radius, no shadows, no gradients, one amber accent used by area in exactly one place — the invalidation watch. Colour shows direction, never judgement: a rate going up is neither good nor bad, and the up-red / up-green convention is a setting. Nothing is gamified — the streak is a bare number, and an empty state gives the next command instead of an apology.
-  </div>
-</section>
-
-</main>
-
-<footer>
-  <div class="wrap footer__inner">
-    <p class="footer__note">No real money. Every position is paper. The point is the record, not the return.</p>
-    <!-- ⚠ USERNAME/REPO 를 실제 저장소 주소로 바꾼다 -->
-    <a class="btn btn--go" href="https://github.com/USERNAME/REPO">Source on GitHub</a>
-  </div>
-</footer>
+  <p class="note"><b>Static reproduction with fixture data — not live market values. The interface is in Korean.</b>
+  Left to right: last night's session review, the market snapshot, the routine checklist; below them the position
+  blotter and, bordered in amber, the invalidation watch — the only place the accent colour is used by area.
+  The layout is fixed at 1240px for the desktop it was built for; on a narrower window this page scrolls sideways.</p>
+</div>
 
 </body>
 </html>

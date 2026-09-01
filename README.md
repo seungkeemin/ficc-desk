@@ -1,80 +1,79 @@
 # ficc-desk
 
-FICC 트레이딩 데스크 루틴을 매일 실행하기 위한 1인용 로컬 웹 대시보드다.
-금리·FX·크레딧 지표를 자동 수집해 한 화면에 모으고, 루틴 체크·관측 기록·
-페이퍼 트레이딩 아이디어를 같은 자리에서 남긴다.
+A one-person, local dashboard for running a FICC trading desk routine. Rates, FX
+and credit on one screen — next to the log that says whether the discipline held.
 
-목적은 수익이 아니라 **규율과 기록**이다. 실제 자금은 없고 모든 포지션은
-페이퍼 트레이딩이다. 사용자 1명, 로컬 실행, 인증 없음, 인터넷 배포 없음을
-전제로 설계했다.
+No real money: every position is paper. The output is not P&L, it is the record.
 
-- 설계 문서: [SPEC.md](SPEC.md)
-- 운영 규칙 / 코드 스타일: [CLAUDE.md](CLAUDE.md)
-- 수동 입력 필드와 출처: [docs/manual_fields.md](docs/manual_fields.md)
+### ▶ [Open the dashboard](https://USERNAME.github.io/REPO/)
 
-## 스택
+Eight panels on a fixed grid, sized so a whole working day fits in one viewport.
+The page never scrolls; only the inside of a panel does. Every number is edited in
+place — click the value, type, it saves. The linked page is a static reproduction
+with fixture data, and the interface is in Korean.
 
-Python 3.14 · FastAPI + Uvicorn · Jinja2 서버 렌더링 · SQLite(WAL) ·
-번호순 `.sql` 마이그레이션 · httpx · pytest. 프론트엔드 빌드 단계가 없다.
+## What it collects
 
-## 데이터 소스
+Three times a day a scheduled task pulls every field it can from three public APIs
+into a local SQLite file. Whatever has no free public source is typed in by hand.
 
-| 소스 | 용도 | 키 |
-|---|---|---|
-| 한국은행 ECOS | 원화 금리, 회사채, USD/KRW 등 | `ECOS_API_KEY` |
-| 세인트루이스 연준 FRED | UST, SOFR, OAS, VIX 등 | `FRED_API_KEY` |
-| 한국거래소 Data Marketplace | 국채선물 종가·미결제약정 | `KRX_AUTH_KEY` |
+| Source | Fields | |
+|---|---:|---|
+| ECOS · Bank of Korea | 16 | Base rate, KOFR, CD/CP 91D, MSB 1Y, KTB 1–30Y, corporate AA-/BBB- 3Y, USD/KRW, JPY, CNY |
+| FRED · St. Louis Fed | 13 | UST 3M–30Y, SOFR, fed funds upper, 10Y breakeven, US IG/HY OAS, USD/JPY, EUR/USD, VIX |
+| KRX Data Marketplace | 5 | KTB futures 3/10/30Y close, open interest 3/10Y |
+| Manual entry | 7 | KRW IRS 1/3/5Y, 1M NDF, 1M FX swap point, DXY, Korea 5Y CDS |
+| Derived on read | 10 | Curve spreads, bond–swap, credit spreads, KR–US 10Y |
+| **On screen** | **51** | 41 stored, 10 computed on read and never written |
 
-공개 소스가 없는 필드(IRS, NDF, DXY, 한국 CDS 등)는 수동 입력이다.
-키가 비어 있으면 해당 필드만 "키 없음"으로 표시되고 수집은 죽지 않는다.
+A field stays manual until a real API call proves the endpoint. DXY is the clearest
+case: it is an ICE proprietary index with no free API, and the broad dollar index on
+FRED is a different number with different weights — so it is not quietly filled in
+under a label that would be a lie.
 
-## 시작하기
+## Seven rules
 
-```bash
+The dashboard is disposable; the time series is not. Breaking one of these corrupts
+data quietly rather than raising an error.
+
+1. **Missing is never zero.** No row is written, and the cell reads "not collected".
+2. **Derived values are never stored.** If an input is missing the result is `None`.
+3. **API specs are never guessed.** Series codes enter the config only after a real call confirms them.
+4. **The observation log is append-only.** No `UPDATE`, no `DELETE`, ever.
+5. **No vault file is ever deleted.** `.obsidian/` is neither read nor written.
+6. **Collection failure is a normal condition.** One dead source does not kill the run.
+7. **No idea without an invalidation condition.** A thesis you cannot be wrong about is not a thesis.
+
+## Design
+
+Not a dark theme — a discipline for information density. Zero corner radius, no
+shadows, no gradients, one amber accent used by area in exactly one place: the
+invalidation watch. Colour shows direction, never judgement — a rate going up is
+neither good nor bad, and up-red / up-green is a setting. Nothing is gamified: the
+streak is a bare number, and an empty state gives the next command, not an apology.
+
+## Run it
+
+Windows, Python 3.14. FastAPI · Jinja2 · SQLite (WAL) · plain JS · pytest (157).
+No Node, no ORM, no build step. Migrations apply themselves on boot.
+
+```
 python -m venv .venv
-```
-
-```bash
 .venv\Scripts\python -m pip install -r requirements.txt
-```
-
-`.env.example` 을 `.env` 로 복사하고 API 키를 채운다.
-
-```bash
 copy .env.example .env
-```
-
-서버를 띄운다. DB 마이그레이션은 기동 시 자동으로 적용된다.
-
-```bash
-.venv\Scripts\python -m uvicorn ficc.app:app --port 8787 --reload
-```
-
-수집을 한 번 돌린다.
-
-```bash
+.venv\Scripts\python -m uvicorn ficc.app:app --port 8787
 .venv\Scripts\python -m ficc.ingest
 ```
 
-`127.0.0.1:8787` 을 연다. (`localhost` 가 아니라 `127.0.0.1` 을 쓰는 이유는
-CLAUDE.md 코드 스타일 항목에 적혀 있다.)
+Then open `127.0.0.1:8787`. Empty keys are fine — that source is skipped and every
+other one still collects, so nothing you have to sign up for is required to see the
+screen.
 
-## Windows 편의 스크립트
+## More
 
-| 스크립트 | 하는 일 |
-|---|---|
-| `scripts\install_shortcut.ps1` | 바탕화면 실행 아이콘 생성 |
-| `scripts\register_tasks.ps1` | 하루 3회 수집 + 마지막 회차 백업 작업 등록 |
-| `scripts\unregister_tasks.ps1` | 위 작업 해제 |
-| `scripts\backup.py` | `VACUUM INTO` 백업 (30일 롤링) |
+- [SPEC.md](SPEC.md) — design, and one line of justification per dependency
+- [CLAUDE.md](CLAUDE.md) — operating rules and code style
+- [docs/manual_fields.md](docs/manual_fields.md) — where each manual field comes from
 
-## 테스트
-
-```bash
-.venv\Scripts\python -m pytest
-```
-
-## 저장소에 없는 것
-
-`data/` 의 SQLite DB, `backups/`, `.env` 는 커밋하지 않는다. 시계열 원본은
-git 이 아니라 백업 파일과 CSV 내보내기로 보존한다.
+`data/` (the SQLite file), `backups/` and `.env` are not committed. The time series
+is preserved by backup files and CSV export, not by git.
