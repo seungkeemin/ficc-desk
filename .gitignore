@@ -1,0 +1,21 @@
+# 비밀
+.env
+
+# DB — 시계열 원본. git이 아니라 backups/ 와 CSV 내보내기로 보존한다.
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# 백업
+backups/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# OS
+Thumbs.db
+desktop.ini

@@ -1,0 +1,122 @@
+{# 아이디어 작성 — SPEC 2.3 의 포지션 레코드 전 필드.
+
+   네이티브 <dialog> 를 쓴다. 포커스 트랩·Esc 닫기·배경 inert·::backdrop 을 브라우저가
+   공짜로 준다. 직접 만들면 포커스 트랩만 60 줄이고, 그 60 줄이 프레임워크 없는 이 화면에서
+   가장 먼저 썩는다.
+
+   무효화 조건은 최소 1 건이다 (CLAUDE.md 7). 여기 required 는 편의일 뿐이고,
+   진짜 강제는 서버(db.create_idea)가 한다 — curl 로 직접 POST 해도 뚫리지 않는다.
+
+   청산 필드(closed_on·result_bp·postmortem)는 없다. 작성 모달이지 청산 모달이 아니다.
+   idea_thesis 는 저장되지만 이 화면 어디에도 나오지 않는다 — Phase 6 내보내기용이다. #}
+<dialog id="idea-modal" class="modal" aria-labelledby="idea-modal-title">
+  <form id="idea-form" class="modal__body" autocomplete="off">
+    <div class="modal__head">
+      <span class="watch__title" id="idea-modal-title">새 아이디어</span>
+      <span class="cap cap--tiny">Esc 로 닫기</span>
+    </div>
+
+    <div class="modal__grid">
+      <label class="mfield mfield--wide">
+        <span class="cap cap--tiny">포지션</span>
+        <input class="field__input" name="position" type="text" required
+               placeholder="국고 3-10 스티프너 (3년 매수/10년 매도)">
+      </label>
+
+      <label class="mfield mfield--wide">
+        <span class="cap cap--tiny">논리 1</span>
+        <input class="field__input" name="thesis" type="text"
+               placeholder="왜 이 포지션인가 — 한 줄">
+      </label>
+      <label class="mfield mfield--wide">
+        <span class="cap cap--tiny">논리 2</span>
+        <input class="field__input" name="thesis" type="text">
+      </label>
+      <label class="mfield mfield--wide">
+        <span class="cap cap--tiny">논리 3</span>
+        <input class="field__input" name="thesis" type="text">
+      </label>
+
+      <label class="mfield mfield--wide">
+        <span class="cap cap--tiny">수급 주체</span>
+        <input class="field__input" name="flow_agent" type="text"
+               placeholder="보험사 장기물 매수">
+      </label>
+
+      <label class="mfield">
+        <span class="cap cap--tiny">전략 유형</span>
+        <select class="field__input" name="strategy" required>
+          <option value="momentum">모멘텀 (MOM)</option>
+          <option value="mean_reversion">평균회귀 (MR)</option>
+        </select>
+      </label>
+      <label class="mfield">
+        <span class="cap cap--tiny">DV01 (원)</span>
+        {# 계산하지 않는다. 사용자가 넣은 명목값을 그대로 신뢰한다 (SPEC 4-4). #}
+        <input class="field__input" name="dv01_krw" type="text" inputmode="numeric"
+               required placeholder="30000000">
+      </label>
+      <label class="mfield">
+        <span class="cap cap--tiny">보유기간 목표 (일)</span>
+        <input class="field__input" name="holding_days" type="number" min="0" required
+               placeholder="10">
+      </label>
+      <label class="mfield">
+        <span class="cap cap--tiny">진입일</span>
+        <input class="field__input" name="opened_on" type="date" required
+               value="{{ vm.header.obs_date }}">
+      </label>
+
+      <label class="mfield mfield--wide">
+        <span class="cap cap--tiny">손익 기준</span>
+        <select class="field__input" name="pricing_key">
+          {# 빈 값이면 매일 수동 마킹한다. 매핑이 불가능한 포지션이 있다 (SPEC 4-3). #}
+          <option value="">(수동 마킹)</option>
+          {% for definition in field_defs %}
+          <option value="{{ definition.field_key }}">
+            {{ definition.label_ko }} · {{ definition.field_key }}
+          </option>
+          {% endfor %}
+        </select>
+      </label>
+
+      <label class="mfield">
+        <span class="cap cap--tiny">레벨 단위</span>
+        <select class="field__input" name="level_unit" required>
+          <option value="bp">bp</option>
+          <option value="pct">pct</option>
+          <option value="krw">krw</option>
+        </select>
+      </label>
+      <label class="mfield">
+        <span class="cap cap--tiny">진입</span>
+        <input class="field__input" name="entry_level" type="text" inputmode="decimal" required>
+      </label>
+      <label class="mfield">
+        <span class="cap cap--tiny">목표</span>
+        <input class="field__input" name="target_level" type="text" inputmode="decimal" required>
+      </label>
+      <label class="mfield">
+        <span class="cap cap--tiny">손절</span>
+        <input class="field__input" name="stop_level" type="text" inputmode="decimal" required>
+      </label>
+    </div>
+
+    <div class="modal__section">
+      <div class="subhead"><span class="cap">무효화 조건 (최소 1건)</span></div>
+      <div id="idea-conditions">
+        <input class="field__input mcond" name="invalidation" type="text" required
+               placeholder="무엇이 사실이면 이 논리가 틀린 것인가">
+        <input class="field__input mcond" name="invalidation" type="text"
+               placeholder="(선택) 두 번째 조건">
+      </div>
+      <button class="ghost-btn" type="button" id="idea-add-condition">조건 추가</button>
+    </div>
+
+    <div class="modal__foot">
+      <span class="modal__error" id="idea-error" role="status"></span>
+      <button class="ghost-btn" type="button" id="idea-cancel">취소</button>
+      <button class="ghost-btn ghost-btn--go" type="submit">저장</button>
+    </div>
+  </form>
+</dialog>

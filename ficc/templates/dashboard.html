@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+{#
+  단일 화면. 스크롤 없이 1920x1080 에 전부 들어간다.
+  data-color-convention 은 app_setting.color_convention 이 그대로 들어온다 —
+  색은 방향만 나타내고 가치판단을 암시하지 않는다 (CLAUDE.md UI 규칙).
+
+  포함 순서 = Tab 순서다. .desk 는 grid-template-areas 로 8 개 영역을 전부 명시
+  배치하므로 DOM 순서를 바꿔도 화면은 움직이지 않는다. 그래서 양수 tabindex 를
+  하나도 쓰지 않고, 실제 입력 순서대로 패널을 나열한다:
+  야간장 → 스냅샷 → 왜 움직였나·영문 브리핑 → 루틴 → 이벤트 → 블로터 → 워치.
+
+  data-mode 가 live 가 아니면(demo/empty 픽스처) 저장을 연결하지 않는다 —
+  레이아웃 확인용 화면에서 실제 DB 에 관측값이 써지면 안 된다.
+#}
+<html lang="ko"
+      data-color-convention="{{ vm.header.color_convention }}"
+      data-obs-date="{{ vm.header.obs_date }}"
+      data-mode="{{ mode }}">
+<head>
+  <meta charset="utf-8">
+  <title>ficc-desk · {{ vm.header.obs_date }}</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div class="desk">
+    {% include "_topbar.html" %}
+
+    <section class="panel a-night">
+      <div class="panel__head"><span class="cap">야간장 리뷰</span></div>
+      <div class="panel__body stack">
+        <div class="field">
+          <label class="cap cap--tiny cap--en field__label" for="review-ny">NY</label>
+          {# 하루의 첫 입력 칸. autofocus 가 없으면 첫 Tab 이 상단 바 버튼으로 간다. #}
+          <textarea class="field__area" id="review-ny" rows="4" autofocus
+                    data-journal="review_ny"
+                    placeholder="뉴욕장 마감 — 무엇이 움직였고 무엇이 안 움직였나"
+                    >{{ vm.journal.review_ny or "" }}</textarea>
+        </div>
+        <div class="field field--grow">
+          <label class="cap cap--tiny cap--en field__label" for="review-ldn">LDN</label>
+          <textarea class="field__area" id="review-ldn"
+                    data-journal="review_ldn"
+                    placeholder="런던장 — 유럽 금리·크레딧"
+                    >{{ vm.journal.review_ldn or "" }}</textarea>
+        </div>
+      </div>
+    </section>
+
+    {% include "_snapshot.html" %}
+
+    <section class="panel a-journal">
+      <div class="panel__head"><span class="cap">왜 움직였나 · 영문 브리핑</span></div>
+      <div class="panel__body stack">
+        <div class="field">
+          <label class="cap cap--tiny field__label" for="why-moved">왜 움직였나 (한 문장)</label>
+          <input class="field__input" id="why-moved" type="text"
+                 data-journal="why_moved"
+                 placeholder="오늘 시장이 왜 움직였나 — 한 문장"
+                 value="{{ vm.journal.why_moved or '' }}">
+        </div>
+        <div class="field field--grow">
+          <label class="cap cap--tiny field__label" for="brief-en">영문 시황 브리핑</label>
+          <textarea class="field__area" id="brief-en"
+                    data-journal="brief_en"
+                    placeholder="Write today's market brief in English."
+                    >{{ vm.journal.brief_en or "" }}</textarea>
+        </div>
+      </div>
+    </section>
+
+    {% include "_routine.html" %}
+
+    {% include "_events.html" %}
+
+    {% include "_blotter.html" %}
+
+    {% include "_watch.html" %}
+  </div>
+
+  {# .desk 바깥에 둔다. 그리드 아이템 후보가 되지 않게 하고, 열렸을 때
+     포함 블록이 그리드가 되는 것도 피한다. #}
+  {% include "_idea_modal.html" %}
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

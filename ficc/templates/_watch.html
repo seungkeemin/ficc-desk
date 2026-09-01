@@ -1,0 +1,58 @@
+{# 시그니처 패널 — 무효화 조건 워치.
+   리스크 시스템의 한도 모니터처럼 보이되, 감시 대상이 손익이 아니라
+   "내 논리가 아직 유효한가" 다. 이 루틴의 목적은 수익이 아니라 규율이다.
+
+   토글은 네이티브 radio 다. 브라우저가 radiogroup 규약을 공짜로 준다 —
+   Tab 은 그룹당 한 번만 멈추고, ←/→/↑/↓ 로 이동하면서 곧바로 선택된다.
+   role="radio" 버튼으로 만들면 roving tabindex 를 직접 짜야 하고, 조건이 10 개면
+   Tab 을 30 번 눌러야 한다. 글리프(◉/○)는 CSS 가 :checked 로 그린다. #}
+{% set states = [('valid', '유효'), ('shaky', '흔들림'), ('broken', '깨짐')] %}
+<section class="panel a-watch">
+  <div class="panel__head">
+    <span class="watch__title">무효화 조건 워치</span>
+  </div>
+  <div class="panel__body">
+    {% if not vm.positions %}
+      <p class="empty">감시 중인 조건 없음 — <span class="empty__cmd">아이디어에 무효화 조건 등록</span></p>
+    {% endif %}
+
+    {% for position in vm.positions %}
+    <div class="wpos" data-position="{{ position.id or '' }}">
+      <div class="wpos__head">
+        <span class="wpos__code">{{ position.code }}</span>
+        <span class="wpos__name">{{ position.position }}</span>
+      </div>
+      <div class="wpos__meta">
+        <span class="num">D+{{ position.holding_days }}</span>
+        <span class="num dir-{{ position.pnl_bp | dir_class }}" data-role="pnl">{{ position.pnl_bp | fmt_signed }} bp</span>
+        <span class="num">목표 {{ position.target_level | fmt_level }} / 손절 {{ position.stop_level | fmt_level }}</span>
+      </div>
+
+      {% for condition in position.invalidations %}
+      <div class="cond
+                  {% if condition.state == 'broken' %}cond--broken{% endif %}
+                  {% if not condition.checked_today %}cond--unchecked{% endif %}"
+           data-condition="{{ condition.id }}">
+        <div class="cond__text" id="cond-{{ condition.id }}-text">{{ condition.text }}</div>
+        <div class="cond__toggle" role="group" aria-labelledby="cond-{{ condition.id }}-text">
+          {% for key, label in states %}
+          <input class="cond__radio" type="radio"
+                 id="cond-{{ condition.id }}-{{ key }}"
+                 name="cond-{{ condition.id }}" value="{{ key }}"
+                 data-invalidation="{{ condition.id }}"
+                 {% if condition.state == key %}checked{% endif %}>
+          <label class="cond__opt cond__opt--{{ key }}" for="cond-{{ condition.id }}-{{ key }}">{{ label }}</label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {# 0 이면 숨기지만 노드는 남긴다 — 점검을 되돌리면 다시 나타나야 한다. #}
+  <div class="watch__foot {% if not vm.header.unchecked_count %}is-hidden{% endif %}"
+       data-role="unchecked-foot">
+    오늘 미점검 조건 <span data-role="unchecked">{{ vm.header.unchecked_count }}</span>건
+  </div>
+</section>

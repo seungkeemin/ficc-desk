@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ficc",
+      "runtimeExecutable": ".venv/Scripts/python",
+      "runtimeArgs": ["-m", "uvicorn", "ficc.app:app", "--port", "8787", "--reload"],
+      "port": 8787
+    }
+  ]
+}

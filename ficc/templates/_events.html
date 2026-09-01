@@ -1,0 +1,76 @@
+{# 이번 주 이벤트. 컨센서스가 아니라 '내 예상 vs 실제' 가 이 패널의 목적이다.
+   그래서 예상과 실제만 인라인으로 고칠 수 있고, 컨센서스는 표시만 한다.
+   하단 한 줄 폼이 없으면 event 테이블은 영원히 비어 있고 월요일 루틴이 거짓말이 된다. #}
+{% set call_ko = {'hit': '적중', 'miss': '빗나감', 'partial': '부분'} %}
+<section class="panel a-events">
+  <div class="panel__head">
+    <span class="cap">이번 주 이벤트</span>
+    <span class="cap cap--tiny">내 예상 vs 실제</span>
+  </div>
+  <div class="panel__body">
+    {% if not vm.events %}
+      <p class="empty">이번 주 이벤트 미등록 — <span class="empty__cmd">아래 한 줄로 등록</span></p>
+    {% endif %}
+
+    {% for event in vm.events %}
+    <div class="event {% if event.actual %}event--past{% endif %}">
+      <span class="event__date num">{{ event.event_date[5:] }}</span>
+      <span class="event__region cap--en">{{ event.region }}</span>
+      <span class="event__name">{{ event.name }}</span>
+      <div class="event__lines">
+        {% if event.consensus %}
+        <div class="event__line"><span class="event__k">컨센</span><span>{{ event.consensus }}</span></div>
+        {% endif %}
+        {% if event.id %}
+        <div class="event__line">
+          <span class="event__k">내 예상</span>
+          <input class="event__input" type="text" placeholder="미기록"
+                 aria-label="{{ event.name }} 내 예상"
+                 data-event="{{ event.id }}" data-column="my_expectation"
+                 value="{{ event.my_expectation or '' }}">
+        </div>
+        <div class="event__line">
+          <span class="event__k">실제</span>
+          <input class="event__input" type="text" placeholder="미발표"
+                 aria-label="{{ event.name }} 실제"
+                 data-event="{{ event.id }}" data-column="actual"
+                 value="{{ event.actual or '' }}">
+          <select class="event__call" aria-label="{{ event.name }} 판정"
+                  data-event="{{ event.id }}" data-column="my_call">
+            <option value="" {% if not event.my_call %}selected{% endif %}>—</option>
+            {% for key, label in call_ko.items() %}
+            <option value="{{ key }}" {% if event.my_call == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% else %}
+        {# demo/empty 픽스처. id 가 없으면 저장할 대상도 없다. #}
+        {% if event.my_expectation %}
+        <div class="event__line"><span class="event__k">내 예상</span><span>{{ event.my_expectation }}</span></div>
+        {% endif %}
+        {% if event.actual %}
+        <div class="event__line">
+          <span class="event__k">실제</span><span>{{ event.actual }}</span>
+          {% if event.my_call %}
+          <span class="event__call--{{ event.my_call }}">{{ call_ko.get(event.my_call, event.my_call) }}</span>
+          {% endif %}
+        </div>
+        {% endif %}
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <form class="event-add" id="event-add" autocomplete="off">
+    <input class="event-add__date" type="date" name="event_date" required
+           aria-label="이벤트 날짜" value="{{ vm.header.obs_date }}">
+    <select class="event-add__region" name="region" aria-label="지역">
+      {% for code in ['KR', 'US', 'EU', 'JP', 'CN'] %}
+      <option value="{{ code }}">{{ code }}</option>
+      {% endfor %}
+    </select>
+    <input class="event-add__name" type="text" name="name" required
+           aria-label="이벤트 이름" placeholder="이벤트 (Enter 로 추가)">
+  </form>
+</section>

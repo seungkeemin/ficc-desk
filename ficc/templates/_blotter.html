@@ -1,0 +1,70 @@
+{# 활성 포지션 블로터. 아이디어 레코드 구조가 한 행에 다 보여야 한다.
+   무효화 조건이 '깨짐' 인 포지션은 워치 패널과 같은 경고색으로 전환된다. #}
+{% set state_ko = {'valid': '유효', 'shaky': '흔들림', 'broken': '깨짐'} %}
+<section class="panel a-blotter">
+  <div class="panel__head">
+    <span class="cap">활성 포지션 블로터</span>
+    <button class="ghost-btn" type="button" id="idea-new">새 아이디어 (N)</button>
+  </div>
+  <div class="panel__body panel__body--flush">
+    {% if not vm.positions %}
+      <p class="empty" style="padding-left: 10px">
+        활성 포지션 없음 — <span class="empty__cmd">수요일 아이디어 작성</span>
+      </p>
+    {% else %}
+    <table class="blotter">
+      <thead>
+        <tr>
+          <th class="t-l">ID</th>
+          <th class="t-l">포지션</th>
+          <th class="t-c">전략</th>
+          <th>진입</th>
+          <th>현재</th>
+          <th>손익 BP</th>
+          <th>목표 / 손절</th>
+          <th>DV01</th>
+          <th class="t-l">수급 주체</th>
+          <th>보유</th>
+          <th class="t-c">상태</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for position in vm.positions %}
+        <tr data-position="{{ position.id or '' }}"
+            class="{% if position.worst_state == 'broken' %}is-broken{% elif position.worst_state == 'shaky' %}is-shaky{% endif %}">
+          <td class="t-l blotter__code">{{ position.code }}</td>
+          <td class="t-l blotter__name" style="width: 100%">{{ position.position }}</td>
+          <td class="t-c"><span class="blotter__tag">{{ position.strategy | strategy_short }}</span></td>
+          <td class="num">{{ position.entry_level | fmt_level }}</td>
+          <td class="num">
+            {# pricing_key 로 자동 산출되는 포지션은 표시만, 수동 마킹 포지션은 그 자리에서 입력한다.
+               마킹 UI 가 없으면 idea_mark 는 영원히 비고 손익이 항상 '미수집' 이다 (SPEC 4-3). #}
+            {%- if position.mark_mode == 'manual' and position.id -%}
+              <input class="cell__input blotter__mark" data-role="level" type="text"
+                     inputmode="decimal" autocomplete="off" spellcheck="false"
+                     aria-label="{{ position.code }} 현재 레벨" placeholder="미수집"
+                     value="{{ '' if position.current_level is none else position.current_level | fmt_level }}"
+                     ><span class="cell__mark" title="수동 마킹">ᴹ</span>
+            {%- else -%}
+              {{ position.current_level | fmt_level }}
+            {%- endif -%}
+          </td>
+          <td class="num strong dir-{{ position.pnl_bp | dir_class }}" data-role="pnl">{{ position.pnl_bp | fmt_signed }}</td>
+          <td class="num">{{ position.target_level | fmt_level }} / {{ position.stop_level | fmt_level }}</td>
+          <td class="num">{{ position.dv01_krw | fmt_dv01 }}</td>
+          <td class="t-l">{{ position.flow_agent or '—' }}</td>
+          <td class="num">D+{{ position.holding_days }}</td>
+          <td class="t-c" data-role="state">
+            {% if position.worst_state %}
+              <span class="state-dot">●</span> {{ state_ko[position.worst_state] }}
+            {% else %}
+              <span class="hint">미점검</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+</section>
