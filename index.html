@@ -132,66 +132,63 @@ h3 {
   color: var(--fg);
 }
 
-/* ---------------------------------------------------------------- lists */
+/* ------------------------------------------------- compact explanation
+ * 대시보드를 뺀 설명은 한 화면에 들어간다. 3 단으로 나누고 각 단은 짧은 목록
+ * 하나씩만 갖는다 — 문단을 늘리기 시작하면 한 화면 규칙이 먼저 깨진다. */
 
-.rules { list-style: none; margin: 0; padding: 0; counter-reset: rule; }
-.rules li {
-  counter-increment: rule;
+.grid3 {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr);
-  gap: 0 10px;
-  padding: 11px 0;
+  /* 명령줄이 가장 긴 마지막 단에 폭을 더 준다 — 균등 분할하면 pre 가 가로 스크롤한다. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.22fr);
+  border-top: 1px solid var(--hairline);
+  border-left: 1px solid var(--hairline);
+}
+.col {
+  border-right: 1px solid var(--hairline);
   border-bottom: 1px solid var(--hairline);
-  max-width: 82ch;
+  padding: 13px 15px;
+  min-width: 0;
 }
-.rules li:first-child { border-top: 1px solid var(--hairline); }
-.rules li::before {
-  content: counter(rule, decimal-leading-zero);
-  color: var(--fg-label);
-  font-size: 12px;
-  line-height: 1.9;
-}
-.rules b { display: block; font-weight: 700; }
-.rules span { color: var(--fg-dim); font-size: 13px; }
+.col h3 { margin: 0 0 9px; }
+.col pre { font-size: 11px; padding: 9px 10px; margin-bottom: 0; }
 
-.bullets { list-style: none; margin: 0; padding: 0; max-width: 82ch; }
-.bullets li {
-  padding: 5px 0 5px 18px;
+.kv { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.kv td { padding: 3px 0; border-bottom: 1px solid var(--hairline); }
+.kv td.n { text-align: right; font-weight: 700; white-space: nowrap; padding-left: 10px; }
+.kv tr:last-child td { border-bottom: 0; padding-top: 5px; border-top: 1px solid var(--hairline-strong); }
+.kv tr:last-child td:first-child { color: var(--fg); font-weight: 700; }
+
+.mini { list-style: none; margin: 0; padding: 0; font-size: 12.5px; counter-reset: r; }
+.mini li {
+  counter-increment: r;
   position: relative;
-  color: var(--fg-dim);
-  font-size: 13px;
-}
-.bullets li::before { content: "—"; position: absolute; left: 0; color: var(--fg-label); }
-.bullets b { color: var(--fg); font-weight: 700; }
-
-/* --------------------------------------------------------------- tables */
-
-.tbl-scroll { overflow-x: auto; }
-table.t { border-collapse: collapse; font-size: 13px; width: 100%; min-width: 640px; }
-table.t th, table.t td {
-  padding: 7px 12px 7px 0;
+  padding: 3px 0 3px 25px;
   border-bottom: 1px solid var(--hairline);
-  text-align: left;
-  vertical-align: top;
 }
-table.t thead th {
-  font-size: 10px;
-  letter-spacing: .09em;
-  text-transform: uppercase;
+.mini li:last-child { border-bottom: 0; }
+.mini li::before {
+  content: counter(r, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  top: 3px;
+  font-size: 11px;
   color: var(--fg-label);
-  font-weight: 400;
-  border-bottom: 1px solid var(--hairline-strong);
-  white-space: nowrap;
 }
-table.t td.n { text-align: right; padding-right: 20px; white-space: nowrap; font-weight: 700; }
-table.t th.n { text-align: right; padding-right: 20px; }
-table.t td.d { color: var(--fg-dim); }
-table.t tfoot td {
-  border-bottom: 0;
-  border-top: 1px solid var(--hairline-strong);
-  color: var(--fg);
-  font-weight: 700;
+
+.tags { font-size: 12.5px; color: var(--fg-dim); margin: 0 0 10px; }
+.tags b { color: var(--fg); font-weight: 700; }
+
+.fine { font-size: 11.5px; line-height: 1.55; color: var(--fg-label); margin: 9px 0 0; }
+.fine b { color: var(--fg-dim); font-weight: 400; }
+
+.strip {
+  border: 1px solid var(--hairline);
+  border-top: 0;
+  padding: 11px 15px;
+  font-size: 12.5px;
+  color: var(--fg-dim);
 }
+.strip b { color: var(--fg); font-weight: 700; }
 
 /* ----------------------------------------------------------------- code */
 
@@ -209,16 +206,6 @@ pre {
 }
 pre .c { color: var(--fg-label); }
 code { font-family: var(--font); font-size: .94em; color: var(--accent); }
-
-.note {
-  border-left: 2px solid var(--accent-line);
-  background: var(--accent-weak);
-  padding: 10px 14px;
-  font-size: 13px;
-  color: var(--fg);
-  max-width: 82ch;
-  margin: 18px 0 0;
-}
 
 /* =================================================== dashboard preview ==
  * ficc/static/app.css 의 규범을 그대로 옮긴 정적 재현이다. 실제 화면은
@@ -486,13 +473,17 @@ footer { border-top: 1px solid var(--hairline-strong); background: var(--bg-rais
 .footer__inner { padding: 26px 0 34px; display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: baseline; }
 .footer__note { font-size: 12px; color: var(--fg-label); flex: 1 1 320px; margin: 0; }
 
+/* 한 화면 규칙은 데스크톱 전제다. 좁아지면 3 단을 세로로 쌓고 스크롤을 허용한다. */
+@media (max-width: 1040px) {
+  .grid3 { grid-template-columns: minmax(0, 1fr); }
+}
+
 @media (max-width: 720px) {
   .masthead__inner { padding-top: 32px; }
   h1 { font-size: 26px; }
   .lede { font-size: 15px; }
   .meta__item { padding: 0 10px; }
   section { padding: 30px 0; }
-  .rules li { grid-template-columns: 24px minmax(0, 1fr); }
 }
 </style>
 </head>
@@ -525,8 +516,7 @@ footer { border-top: 1px solid var(--hairline-strong); background: var(--bg-rais
 <section>
   <div class="head"><h2><span class="n">01</span>The screen</h2></div>
   <div class="prose">
-    <p>Eight panels on a fixed grid, sized so a whole working day fits in one viewport. The page never scrolls; only the inside of a panel does. Every number is entered or corrected in place — click the value, type, it saves.</p>
-  </div>
+    <p>Eight panels on a fixed grid, sized so a whole working day fits in one viewport. The page never scrolls; only the inside of a panel does. Every number is edited in place.</p>
 
   <div class="screen-frame">
     <div class="desk">
@@ -727,139 +717,56 @@ footer { border-top: 1px solid var(--hairline-strong); background: var(--bg-rais
     </div>
   </div>
 
-  <p class="caption"><b>Static reproduction with fixture data — not live market values. The interface is in Korean.</b> Reading across: last night's session review, the market snapshot, today's routine checklist; then the one-sentence "why did it move", the event calendar with my call recorded before the print; then the position blotter and — bordered in amber, the only place the accent colour is used by area — the invalidation watch.</p>
+  <p class="caption"><b>Static reproduction with fixture data — not live market values. The interface is in Korean.</b> Left to right: last night's session review, the market snapshot, the routine checklist; then the position blotter and, bordered in amber, the invalidation watch.</p>
 </section>
 
 <section>
-  <div class="head"><h2><span class="n">02</span>What it does</h2></div>
-  <div class="prose">
-    <p>Three times a day a scheduled task pulls every field it can from three public APIs into a local SQLite file. Whatever has no free public source is typed in by hand. Spreads are never stored — they are computed when the page is drawn, from whichever inputs actually exist.</p>
+  <div class="head"><h2><span class="n">02</span>How it works</h2></div>
+
+  <div class="grid3">
+
+    <div class="col">
+      <h3>What it collects</h3>
+      <table class="kv">
+        <tr><td>ECOS · Bank of Korea</td><td class="n">16</td></tr>
+        <tr><td>FRED · St. Louis Fed</td><td class="n">13</td></tr>
+        <tr><td>KRX Data Marketplace</td><td class="n">5</td></tr>
+        <tr><td>Manual entry</td><td class="n">7</td></tr>
+        <tr><td>Derived on read</td><td class="n">10</td></tr>
+        <tr><td>On screen</td><td class="n">51</td></tr>
+      </table>
+      <p class="fine">Collected three times a day into a local SQLite file. 41 stored, 10 computed on read and never written. A field stays manual until a real API call proves the endpoint — <b>DXY has no free API, so it is typed in rather than faked from a different index.</b></p>
+    </div>
+
+    <div class="col">
+      <h3>Seven rules</h3>
+      <ol class="mini">
+        <li>Missing is never zero.</li>
+        <li>Derived values are never stored.</li>
+        <li>API specs are never guessed.</li>
+        <li>The observation log is append-only.</li>
+        <li>No vault file is ever deleted.</li>
+        <li>Collection failure is a normal condition.</li>
+        <li>No idea without an invalidation condition.</li>
+      </ol>
+      <p class="fine">The dashboard is disposable; the time series is not. <b>Breaking one of these corrupts data quietly rather than raising an error.</b></p>
+    </div>
+
+    <div class="col">
+      <h3>Run it</h3>
+      <p class="tags"><b>FastAPI</b> · Jinja2 · <b>SQLite</b> (WAL) · plain JS · pytest <b>157</b><br>No Node, no ORM, no build step.</p>
+<pre>python -m venv .venv
+.venv\Scripts\python -m pip install -r requirements.txt
+copy .env.example .env
+.venv\Scripts\python -m uvicorn ficc.app:app --port 8787</pre>
+      <p class="fine">Migrations apply themselves on boot. <b>Empty keys are fine — that source is skipped and every other one still collects.</b></p>
+    </div>
+
   </div>
 
-  <div class="tbl-scroll">
-    <table class="t">
-      <thead>
-        <tr><th>Source</th><th class="n">Fields</th><th>What it covers</th></tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>ECOS — Bank of Korea</td><td class="n">16</td>
-          <td class="d">Base rate, KOFR, CD/CP 91D, MSB 1Y, KTB 1–30Y, corporate AA-/BBB- 3Y, USD/KRW, KRW/100JPY, KRW/CNY</td>
-        </tr>
-        <tr>
-          <td>FRED — St. Louis Fed</td><td class="n">13</td>
-          <td class="d">UST 3M–30Y, SOFR, fed funds target upper, 10Y breakeven, US IG/HY OAS, USD/JPY, EUR/USD, VIX</td>
-        </tr>
-        <tr>
-          <td>KRX Data Marketplace</td><td class="n">5</td>
-          <td class="d">KTB futures 3/10/30Y close and open interest 3/10Y — called once a day, response cached</td>
-        </tr>
-        <tr>
-          <td>Manual entry</td><td class="n">7</td>
-          <td class="d">KRW IRS 1/3/5Y, 1M NDF, 1M FX swap point, DXY, Korea 5Y CDS — no free public source exists for these</td>
-        </tr>
-        <tr>
-          <td>Derived on read</td><td class="n">10</td>
-          <td class="d">Curve spreads, bond–swap, credit spreads, the KR–US 10Y differential — never written to the database</td>
-        </tr>
-      </tbody>
-      <tfoot>
-        <tr><td>On screen</td><td class="n">51</td><td>41 stored · 10 derived</td></tr>
-      </tfoot>
-    </table>
+  <div class="strip">
+    <b>Design.</b> Zero corner radius, no shadows, no gradients, one amber accent used by area in exactly one place — the invalidation watch. Colour shows direction, never judgement: a rate going up is neither good nor bad, and the up-red / up-green convention is a setting. Nothing is gamified — the streak is a bare number, and an empty state gives the next command instead of an apology.
   </div>
-
-  <p class="note">A field stays manual until a real API call proves the endpoint. DXY is the clearest case: it is an ICE proprietary index with no free API, and the broad dollar index on FRED is a different number with different weights — so it is not quietly filled in under a label that would be a lie.</p>
-</section>
-
-<section>
-  <div class="head"><h2><span class="n">03</span>Seven rules</h2></div>
-  <div class="prose">
-    <p>The dashboard is disposable; the time series is not. These are the invariants the code is written against — breaking one corrupts data quietly rather than raising an error.</p>
-  </div>
-
-  <ol class="rules">
-    <li><b>Missing is never zero.</b><span>If a value was not collected, no row is written and the cell reads "not collected". "There is no value" and "the value is 0" are never mixed.</span></li>
-    <li><b>Derived values are never stored.</b><span>Spreads are computed on read. If any input is missing the result is None — never substituted with 0.</span></li>
-    <li><b>API specs are never guessed.</b><span>Series codes and endpoints enter the config only after a real call confirms them, annotated with the date they were verified.</span></li>
-    <li><b>The observation log is append-only.</b><span>No UPDATE, no DELETE, under any circumstance. Every overwrite of a value is recorded there instead.</span></li>
-    <li><b>No vault file is ever deleted.</b><span>The Obsidian <code>.obsidian/</code> directory is neither read nor written.</span></li>
-    <li><b>Collection failure is a normal condition.</b><span>One dead source does not kill the run. Successful fields are stored; failures land in a result table with the reason.</span></li>
-    <li><b>No idea without an invalidation condition.</b><span>At least one is required, enforced at the application level. A thesis you cannot be wrong about is not a thesis.</span></li>
-  </ol>
-</section>
-
-<section>
-  <div class="head"><h2><span class="n">04</span>Design</h2></div>
-  <div class="prose">
-    <p>Not a dark theme — a discipline for information density, borrowed from real FICC terminals. Corner radius is zero, there are no shadows and no gradients, and the accent is a single amber used by area in exactly one place: the invalidation watch.</p>
-  </div>
-
-  <h3>Colour shows direction, never judgement</h3>
-  <ul class="bullets">
-    <li>A rate going up is neither good nor bad. <b>Up red / down blue</b> is the Korean convention and the default; <b>up green / down red</b> is the Bloomberg one. It is a setting, and neither palette implies an opinion.</li>
-    <li>"Broken" is marked by <b>shape as well as colour</b> — inverted background plus a 3px left bar — so it does not depend on which direction palette is active.</li>
-  </ul>
-
-  <h3>Nothing is gamified</h3>
-  <ul class="bullets">
-    <li>The streak is a <b>bare number</b>. No badge, no celebration, no warning when it breaks.</li>
-    <li>No welcome message, no motivational copy, no emoji, no illustration.</li>
-    <li>A value flashes once for 150ms when it updates. That is the only animation, and <code>prefers-reduced-motion</code> removes it.</li>
-  </ul>
-
-  <h3>Empty states give the next command</h3>
-  <ul class="bullets">
-    <li>Not <b>"No data yet :("</b> but <b>"Today's snapshot not collected — python -m ficc.ingest"</b>.</li>
-    <li>Not an apology but an instruction: <b>"No active position — write Wednesday's idea"</b>.</li>
-  </ul>
-</section>
-
-<section>
-  <div class="head"><h2><span class="n">05</span>Stack</h2></div>
-  <div class="prose">
-    <p>Every dependency carries one line of justification in <code>SPEC.md</code>. The constraint that shaped the list: it has to still run in a year, on this machine, without a build step.</p>
-  </div>
-
-  <div class="tbl-scroll">
-    <table class="t">
-      <thead><tr><th>Layer</th><th>Choice</th><th>Why</th></tr></thead>
-      <tbody>
-        <tr><td>Web</td><td>FastAPI + Uvicorn</td><td class="d">Type-hint validation stops unit and typo errors at the entry point, where the manual fields come in</td></tr>
-        <tr><td>Templates</td><td>Jinja2, server-rendered</td><td class="d">One screen, almost no state — an SPA would add a build step just to check a refresh</td></tr>
-        <tr><td>Interaction</td><td>~200 lines of plain JS</td><td class="d">Inline edit, debounced save, one flash. A framework here would not survive a year of neglect</td></tr>
-        <tr><td>Database</td><td>SQLite, WAL</td><td class="d">A single file, so a backup is a file copy — the easiest way not to lose the series</td></tr>
-        <tr><td>Migrations</td><td>Numbered .sql + schema_version</td><td class="d">Alembic is too much for a one-person local DB, and schema history reads better as text</td></tr>
-        <tr><td>Scheduling</td><td>Windows Task Scheduler</td><td class="d">An OS primitive — no resident process, and it runs whenever the machine is on</td></tr>
-        <tr><td>Tests</td><td>pytest — 157</td><td class="d">Derived values, backfill and export idempotency. UI tests would not pay for themselves here</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <h3>Deliberately not used</h3>
-  <p class="caption" style="max-width:74ch">Docker · PostgreSQL · authentication · an ORM · Tailwind · any frontend build tool · state management · WebSockets · Node.js. In a one-person local app, every one of them is pure maintenance cost.</p>
-</section>
-
-<section>
-  <div class="head"><h2><span class="n">06</span>Run it</h2></div>
-  <div class="prose">
-    <p>Windows, Python 3.14. Migrations apply themselves on boot, so there is no database setup step.</p>
-  </div>
-
-<pre><span class="c"># create the environment and install</span>
-python -m venv .venv
-.venv\Scripts\python -m pip install -r requirements.txt</pre>
-
-<pre><span class="c"># copy the key template and fill in whatever you have</span>
-copy .env.example .env</pre>
-
-<pre><span class="c"># serve on 127.0.0.1:8787</span>
-.venv\Scripts\python -m uvicorn ficc.app:app --port 8787 --reload</pre>
-
-<pre><span class="c"># collect once</span>
-.venv\Scripts\python -m ficc.ingest</pre>
-
-  <p class="note">Empty keys are fine. A source with no key marks its fields "no key" and is skipped — the run does not die, and every other source still collects. Nothing you have to sign up for is required to see the screen.</p>
 </section>
 
 </main>
