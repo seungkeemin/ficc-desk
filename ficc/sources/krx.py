@@ -66,6 +66,11 @@ def call(endpoint: str, bas_dd: str) -> list[dict]:
     return rows
 
 
+def is_calendar_spread(row: dict) -> bool:
+    """ISU_NM 에 ' SP ' 토큰이 있으면 캘린더 스프레드 종목이다 (단일 결제월은 ' F ')."""
+    return "SP" in str(row.get("ISU_NM", "")).split()
+
+
 def rows_for_latest_session(endpoint: str, target: date,
                             lookback_days: int = LOOKBACK_DAYS
                             ) -> tuple[date, list[dict]] | None:
@@ -98,10 +103,14 @@ def fetch(field_key: str, target: date) -> FetchResult:
         return Missing(field_key, f"최근 {LOOKBACK_DAYS}일 영업일 데이터 없음")
 
     session, rows = found
+    # 캘린더 스프레드 행은 거래량 비교 전에 뺀다. 롤오버 주간에는 스프레드 거래량이
+    # 최근월물보다 커서, 빼지 않으면 스프레드 가격이 선물 종가로 저장된다
+    # (2026-09-10·11·14 실측: ISU_NM '3년국채    SP 2609-2612 (주간)').
     matched = [
         row for row in rows
         if str(row.get("PROD_NM", "")).strip() == spec.product_name
         and str(row.get("MKT_NM", "")).strip() in {"", "정규"}
+        and not is_calendar_spread(row)
     ]
     if not matched:
         return Missing(field_key, f"{session} 행 중 '{spec.product_name}' 없음")
